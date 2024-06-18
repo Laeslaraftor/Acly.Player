@@ -21,6 +21,11 @@
 		<Title>Acly.Player</Title>
 		<GenerateDocumentationFile>True</GenerateDocumentationFile>
 		<EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
+		<Description>Библиотека Windows и Android плеера с возможностью удалённого управления</Description>
+		<RepositoryUrl>https://github.com/Laeslaraftor/Acly.Player</RepositoryUrl>
+		<PackageTags>maui, android, windows, player, media, notification, controls, remote, transport, audio, song, music</PackageTags>
+		<NeutralLanguage>ru</NeutralLanguage>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net8.0-android34.0|AnyCPU'">
