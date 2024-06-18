@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Test.MainPage">
+
+    <ScrollView>
+        <VerticalStackLayout
+            Padding="30,0"
+            Spacing="25">
+            <Entry x:Name="songName" Placeholder="название аудио" Text="Deja Vu"/>
+            <Entry x:Name="songArtist" Placeholder="автор аудио" Text="Yves V, INNA, Janieck"/>
+            <Entry x:Name="songUrl" Placeholder="адрес аудио" Text="https://acly.ru/resourse/user-music/e9e53e45dd01dfecebed2ee730c26aa2Yves-V,-INNA,-Janieck-Deja-Vu.mp3"/>
+            <Entry x:Name="songImage" Placeholder="адрес картинки" Text="https://e-cdns-images.dzcdn.net/images/cover/02cb3d9fb950ecd7f2023e9d4ab04864/500x500-000000-80-0-0.jpg"/>
+            <Image WidthRequest="200" HeightRequest="200" x:Name="songImagePreview"/>
+            <Button x:Name="songControl" Text="Включить/пауза" Clicked="songControl_Clicked"/>
+            <Slider x:Name="songTime"/>
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>
