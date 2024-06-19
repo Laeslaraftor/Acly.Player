@@ -150,9 +150,15 @@ namespace Acly.Player
         /// <param name="Data"><inheritdoc/></param>
         public async Task SetSource(byte[] Data)
         {
-            InvokeSourceChangedEvent();
+            if (SourceSetted)
+            {
+                _Player.Reset();
+            }
+
             await _Player.SetDataSourceAsync(new MediaData(Data));
             _Player.PrepareAsync();
+
+            InvokeSourceChangedEvent();
         }
         /// <summary>
         /// <inheritdoc/>
@@ -186,6 +192,11 @@ namespace Acly.Player
         {
             _LastItem = Item;
             UpdateNotification();
+
+            if (SourceSetted)
+            {
+                _Player.Reset();
+            }
 
             await _Player.SetDataSourceAsync(Item.AudioUrl);
             _Player.PrepareAsync();
