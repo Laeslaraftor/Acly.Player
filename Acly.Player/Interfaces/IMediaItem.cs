@@ -1,25 +1,18 @@
-﻿#if ANDROID
-using Android.Graphics;
-using Android.Support.V4.Media;
-#elif WINDOWS
-using Windows.Storage.Streams;
-#endif
-
-namespace Acly.Player
+﻿namespace Acly.Player
 {
     /// <summary>
     /// Интерфейс медиа предмета
     /// </summary>
-    public interface IMediaItem : IDisposable
+    public interface IMediaItem
     {
         /// <summary>
         /// Название
         /// </summary>
-        public string Title { get; }
+        public string Title { get; set; }
         /// <summary>
         /// Исполнитель
         /// </summary>
-        public string Artist { get; }
+        public string Artist { get; set; }
         /// <summary>
         /// Продолжительность аудиофайла
         /// </summary>
@@ -27,30 +20,11 @@ namespace Acly.Player
         /// <summary>
         /// Адрес или путь к аудиофайлу
         /// </summary>
-        public string AudioUrl { get; }
+        public string AudioUrl { get; set; }
         /// <summary>
         /// Обложка (необязательно)
         /// </summary>
-        public string? ImageUrl { get; }
-
-#if ANDROID
-        /// <summary>
-        /// Получить обложку
-        /// </summary>
-        /// <returns>Картинка обложки</returns>
-        public Task<Bitmap?> GetImage();
-        /// <summary>
-        /// Конвертировать в метаданные
-        /// </summary>
-        /// <returns>Метаданные</returns>
-        public MediaMetadataCompat? ToMetadata();
-#elif WINDOWS
-        /// <summary>
-        /// Получить обложку
-        /// </summary>
-        /// <returns>Картинка обложки</returns>
-        public RandomAccessStreamReference? GetImage();
-#endif
+        public string? ImageUrl { get; set; }
 
         /// <summary>
         /// Получить картинку обложки

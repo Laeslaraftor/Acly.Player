@@ -14,6 +14,8 @@ namespace Acly.Player.Android.Media
     public class PlaybackService : AndroidX.Media2.Session.MediaSessionService
     {
         private static PlaybackService? _Current;
+        private static IMediaItem? _LastItem;
+        private static Bitmap? _LastItemImage;
 
         private MediaSession? _MediaSession;
         private MediaSessionCompat? _MediaCompat;
@@ -74,14 +76,21 @@ namespace Acly.Player.Android.Media
                 return;
             }
 
-            Bitmap? Image = await Item.GetImage();
+            Bitmap? Image = _LastItemImage;
 
+            if (_LastItem != Item)
+            {
+                Image = await Item.GetImage();
+            }
             if (Image != null)
             {
                 Notification?.SetLargeIcon(Image);
             }
 
             BuildNotification(Notification);
+
+            _LastItem = Item;
+            _LastItemImage = Image;
         }
         private static void CreateChannel()
         {

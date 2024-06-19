@@ -100,12 +100,12 @@ Task SetSource(IMediaItem Item);
 Последний метод устанавливает источник аудио и данные о медиа, которые будут отображаться при удалённом управлении плеером:
 
 ```c#
-public interface IMediaItem : IDisposable
+public interface IMediaItem
 {
-    public string Title { get; }
-    public string Artist { get; }
+    public string Title { get; set; }
+    public string Artist { get; set; }
     public TimeSpan Duration { get; set; }
-    public string AudioUrl { get; }
-    public string? ImageUrl { get; }
+    public string AudioUrl { get; set; }
+    public string? ImageUrl { get; set; }
 }
 ```
