@@ -144,6 +144,7 @@ namespace Acly.Player
         private SimplePlayerState _State = SimplePlayerState.Stopped;
         private float _Volume = 1;
         private Handler? _Timer = new();
+        private bool _DisableCompletedEvent;
 
         #region Установка
 
@@ -153,15 +154,21 @@ namespace Acly.Player
         /// <param name="Data"><inheritdoc/></param>
         public async Task SetSource(byte[] Data)
         {
+            _DisableCompletedEvent = true;
             if (SourceSetted)
             {
                 _Player.Reset();
             }
 
-            await _Player.SetDataSourceAsync(new MediaData(Data));
-            _Player.PrepareAsync();
+            if (!await TrySetSourceAndPrepare(Data))
+            {
+                await SetSource(Data);
+                return;
+            }
+            
 
             InvokeSourceChangedEvent();
+            _DisableCompletedEvent = false;
         }
         /// <summary>
         /// <inheritdoc/>
@@ -193,6 +200,7 @@ namespace Acly.Player
         /// <param name="Item"><inheritdoc/></param>
         public async Task SetSource(IMediaItem Item)
         {
+            _DisableCompletedEvent = true;
             Source = Item;
             UpdateNotification();
 
@@ -201,10 +209,14 @@ namespace Acly.Player
                 _Player.Reset();
             }
 
-            await _Player.SetDataSourceAsync(Item.AudioUrl);
-            _Player.PrepareAsync();
+            if (!await TrySetSourceAndPrepare(Item.AudioUrl))
+            {
+                await SetSource(Item);
+                return;
+            }
 
             InvokeSourceChangedEvent();
+            _DisableCompletedEvent = false;
         }
 
         #endregion
@@ -313,6 +325,46 @@ namespace Acly.Player
             throw new NotImplementedException();
         }
 
+        private async Task<bool> TrySetSourceAndPrepare(byte[] Data)
+        {
+            return await TryPerform(() =>
+            {
+                _Player.SetDataSource(new MediaData(Data));
+                _Player.Prepare();
+            });
+        }
+        private async Task<bool> TrySetSourceAndPrepare(string AudioUrl)
+        {
+            return await TryPerform(() =>
+            {
+                _Player.SetDataSource(AudioUrl);
+                _Player.Prepare();
+            });
+        }
+        /// <summary>
+        /// прохерачивалка
+        /// </summary>
+        /// <param name="Action">действие, которое нужно прохерачить</param>
+        /// <returns>успешно ли прохерачилось</returns>
+        private async Task<bool> TryPerform(Action Action)
+        {
+            bool Result = true;
+
+            await Task.Run(() =>
+            {
+                try
+                {
+                    Action?.Invoke();
+                }
+                catch
+                {
+                    Result = false;
+                }
+            });
+
+            return Result;
+        }
+
         #endregion
 
         #region Уведомление
@@ -352,6 +404,11 @@ namespace Acly.Player
         }
         private void OnSourceCompleted(object? sender, EventArgs e)
         {
+            if (_DisableCompletedEvent)
+            {
+                return;
+            }
+
             SourceEnded?.Invoke();
         }
         private void OnSeekRequest(TimeSpan Position)
