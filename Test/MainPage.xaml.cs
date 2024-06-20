@@ -1,6 +1,5 @@
-﻿using Acly.Player;
-using System.Diagnostics;
-using System.Timers;
+﻿
+using Acly.Player;
 
 namespace Test
 {
@@ -9,126 +8,105 @@ namespace Test
         public MainPage()
         {
             InitializeComponent();
-
             _Current = this;
+        }
 
-            _Player = new CrossPlayer()
+        private readonly List<AudioInfo> _Presets = [
+            new() {
+                Title = "Deja Vu",
+                Artist = "Yves V, INNA, Janieck",
+                AudioUrl = "https://acly.ru/resourse/user-music/e9e53e45dd01dfecebed2ee730c26aa2Yves-V,-INNA,-Janieck-Deja-Vu.mp3",
+                ImageUrl = "https://e-cdns-images.dzcdn.net/images/cover/02cb3d9fb950ecd7f2023e9d4ab04864/500x500-000000-80-0-0.jpg"
+            },
+            new() {
+                Title = "Poison",
+                Artist = "Bhaskar",
+                AudioUrl = "https://acly.ru/resourse/user-music/1d4b3d17657dd1641683c6c542e1be88Bhaskar-Poison.mp3",
+                ImageUrl = "https://cdns-images.dzcdn.net/images/cover/baaf513b65d140007c30b4ed59140d1e/500x500-000000-80-0-0.jpg"
+            },
+            new() {
+                Title = "Not Gonna Get Us",
+                Artist = "Harddope, Nito-Onna",
+                AudioUrl = "https://acly.ru/resourse/user-music/770b59d4614d4f19b93295d87afc296dHarddope,-Nito-Onna-Not-Gonna-Get-Us.mp3",
+                ImageUrl = "https://e-cdns-images.dzcdn.net/images/cover/bee450fc529e5ecff9f5a9ea9baa6cc6/500x500-000000-80-0-0.jpg"
+            },
+            new() {
+                Title = "Castle",
+                Artist = "Clarx, Harddope",
+                AudioUrl = "https://acly.ru/resourse/user-music/0e6791e757d2046d0fcd81ea7fb42d32Clarx,-Harddope-Castle.mp3",
+                ImageUrl = "https://cdns-images.dzcdn.net/images/cover/c19ce14b22aaa8784b53cb0554278eb9/500x500-000000-80-0-0.jpg"
+            },
+            new()
+        ];
+
+        #region Список
+
+        private AudioInfo? FindInfoByFullName(string FullName)
+        {
+            foreach (var Info in _Presets)
             {
-                AutoPlay = true
-            };
-            _Player.SourceChanged += OnSourceChanged;
-            songTime.ValueChanged += SongTime_ValueChanged;
-
-            _Player.SkippedToNext += _Player_SkippedToNext;
-            _Player.SkippedToPrevious += _Player_SkippedToPrevious;
-        }
-
-        private async void _Player_SkippedToPrevious()
-        {
-            await Alert("То сё", "Назад", "Да");
-        }
-
-        private async void _Player_SkippedToNext()
-        {
-            await Alert("То сё", "Вперёд", "Да");
-        }
-
-        private static MainPage _Current;
-        private IPlayer _Player;
-        private string? url = null;
-
-        private void Timer_Elapsed(object? sender, ElapsedEventArgs e)
-        {
-            //try
-            //{
-            //    Dispatcher.Dispatch(() =>
-            //    {
-            //        songTime.Value = _Player.Position.TotalSeconds;
-            //    });
-            //}
-            //catch (Exception Error)
-            //{
-            //    Debug.WriteLine(Error.Message);
-            //}
-        }
-        private void SongTime_ValueChanged(object? sender, ValueChangedEventArgs e)
-        {
-            _Player.Position = TimeSpan.FromSeconds(songTime.Value);
-        }
-        private async void OnSourceChanged()
-        {
-            await Task.Delay(1000);
-
-            try
-            {
-                Dispatcher.Dispatch(() =>
+                if (Info.FullName == FullName)
                 {
-                    songTime.Maximum = _Player.Duration.TotalSeconds;
-                });
-            }
-            catch (Exception Error)
-            {
-                Debug.WriteLine(Error.Message);
-            }
-        }
-
-        private void songControl_Clicked(object sender, EventArgs e)
-        {
-            if (url == songUrl.Text)
-            {
-                if (_Player.IsPlaying)
-                {
-                    _Player.Pause();
+                    return Info;
                 }
-                else
-                {
-                    _Player.Play();
-                }
+            }
 
+            return null;
+        }
+
+        private void AddPlayer(string Preset)
+        {
+            AudioInfo? Info = FindInfoByFullName(Preset);
+            Info ??= new();
+
+            MiniPlayer Player = new(Info);
+            Player.Removed += OnPlayerRemoved;
+
+            PlayersList.Children.Add(Player);
+        }
+
+        #endregion
+
+        #region События
+
+        private void OnAddButtonClicked(object sender, EventArgs e)
+        {
+            PresetsBlock.IsVisible = true;
+            PresetsBlockList.ItemsSource = _Presets;
+        }
+        private void OnPresetButtonClicked(object sender, EventArgs e)
+        {
+            AddPlayer(((Button)sender).Text);
+            OnClosePresetsBlockButtonClicked(sender, e);
+        }
+        private void OnClosePresetsBlockButtonClicked(object sender, EventArgs e)
+        {
+            PresetsBlock.IsVisible = false;
+        }
+
+        private void OnPlayerRemoved(MiniPlayer Player)
+        {
+            Player.Removed += OnPlayerRemoved;
+            PlayersList.Children.Remove(Player);
+        }
+
+        #endregion
+
+        #region Статика
+
+        private static MainPage? _Current;
+
+        public static async void Alert(string Title, string Text, string ButtonText)
+        {
+            if (_Current == null)
+            {
                 return;
             }
 
-            UpdateSource();
-        }
-        private async void UpdateSource()
-        {
-            url = songUrl.Text.Trim();
-            string imageUrl = songImage.Text.Trim();
-
-            await _Player.SetSource(new MediaItem
-            {
-                Title = songName.Text.Trim(),
-                Artist = songArtist.Text.Trim(),
-                AudioUrl = url,
-                ImageUrl = imageUrl
-            });
-
-            songImagePreview.Source = ImageSource.FromUri(new(imageUrl, UriKind.Absolute));
+            await _Current.DisplayAlert(Title, Text, ButtonText);
         }
 
-        private void ContentPage_Loaded(object sender, EventArgs e)
-        {
-            try
-            {
-                System.Timers.Timer timer = new(TimeSpan.FromSeconds(0.5))
-                {
-                    AutoReset = true,
-                    Enabled = true
-                };
-
-                timer.Elapsed += Timer_Elapsed;
-                timer.Start();
-            }
-            catch (Exception Error)
-            {
-                Debug.WriteLine(Error.Message);
-            }
-        }
-
-        public static async Task Alert(string Title, string Text, string Button)
-        {
-            await _Current.DisplayAlert(Title, Text, Button);
-        }
+        #endregion
     }
 
 }

@@ -135,12 +135,15 @@ namespace Acly.Player
                 StateChanged?.Invoke(value);
             }
         }
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
+        public IMediaItem? Source { get; private set; }
 
         private readonly MediaPlayer _Player;
         private SimplePlayerState _State = SimplePlayerState.Stopped;
         private float _Volume = 1;
         private Handler? _Timer = new();
-        private IMediaItem? _LastItem;
 
         #region Установка
 
@@ -190,7 +193,7 @@ namespace Acly.Player
         /// <param name="Item"><inheritdoc/></param>
         public async Task SetSource(IMediaItem Item)
         {
-            _LastItem = Item;
+            Source = Item;
             UpdateNotification();
 
             if (SourceSetted)
@@ -316,7 +319,7 @@ namespace Acly.Player
 
         private void UpdateNotification()
         {
-            PlayerNotification.Update(this, _LastItem);
+            PlayerNotification.Update(this, Source);
         }
 
         #endregion
@@ -335,9 +338,9 @@ namespace Acly.Player
             State = SimplePlayerState.Paused;
             Duration = TimeSpan.FromMilliseconds(_Player.Duration);
 
-            if (_LastItem != null && _LastItem.Duration == TimeSpan.Zero)
+            if (Source != null && Source.Duration == TimeSpan.Zero)
             {
-                _LastItem.Duration = Duration;
+                Source.Duration = Duration;
             }
 
             UpdateNotification();

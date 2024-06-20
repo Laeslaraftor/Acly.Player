@@ -1,20 +1,35 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             x:Class="Test.MainPage">
-
-    <ScrollView>
-        <VerticalStackLayout
-            Padding="30,0"
-            Spacing="25">
-            <Entry x:Name="songName" Placeholder="название аудио" Text="Deja Vu"/>
-            <Entry x:Name="songArtist" Placeholder="автор аудио" Text="Yves V, INNA, Janieck"/>
-            <Entry x:Name="songUrl" Placeholder="адрес аудио" Text="https://acly.ru/resourse/user-music/e9e53e45dd01dfecebed2ee730c26aa2Yves-V,-INNA,-Janieck-Deja-Vu.mp3"/>
-            <Entry x:Name="songImage" Placeholder="адрес картинки" Text="https://e-cdns-images.dzcdn.net/images/cover/02cb3d9fb950ecd7f2023e9d4ab04864/500x500-000000-80-0-0.jpg"/>
-            <Image WidthRequest="200" HeightRequest="200" x:Name="songImagePreview"/>
-            <Button x:Name="songControl" Text="Включить/пауза" Clicked="songControl_Clicked"/>
-            <Slider x:Name="songTime"/>
-        </VerticalStackLayout>
-    </ScrollView>
-
+             xmlns:t="clr-namespace:Test"
+             x:Class="Test.MainPage"
+             BackgroundColor="WhiteSmoke">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition/>
+            <RowDefinition Height="50"/>
+        </Grid.RowDefinitions>
+        <ScrollView>
+            <VerticalStackLayout x:Name="PlayersList">
+                <VerticalStackLayout.Resources>
+                    <Style TargetType="t:MiniPlayer">
+                        <Setter Property="Margin" Value="10"/>
+                    </Style>
+                </VerticalStackLayout.Resources>
+            </VerticalStackLayout>
+        </ScrollView>
+        <Button Grid.Row="1" HorizontalOptions="Center" VerticalOptions="Center" Text="Добавить" Clicked="OnAddButtonClicked"/>
+        <Grid IsVisible="False" x:Name="PresetsBlock" BackgroundColor="#7F000000" Grid.RowSpan="2">
+            <Button Text="Закрыть" HorizontalOptions="End" VerticalOptions="Start" Margin="5" Clicked="OnClosePresetsBlockButtonClicked"/>
+            <ListView x:Name="PresetsBlockList" MaximumWidthRequest="400" VerticalOptions="Center">
+                <ListView.ItemTemplate>
+                    <DataTemplate>
+                        <ViewCell>
+                            <Button Margin="5" Text="{Binding FullName}" Clicked="OnPresetButtonClicked"/>
+                        </ViewCell>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+        </Grid>
+    </Grid>
 </ContentPage>

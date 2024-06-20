@@ -18,10 +18,6 @@ namespace Acly.Player
             {
                 SourceEnded?.Invoke();
             };
-            _Player.MediaOpened += (p, obj) =>
-            {
-                SourceChanged?.Invoke();
-            };
             _Player.CurrentStateChanged += (p, obj) =>
             {
                 StateChanged?.Invoke(State);
@@ -143,11 +139,24 @@ namespace Acly.Player
                 return result;
             }
         }
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
+        public IMediaItem? Source
+        {
+            get => _Source;
+            private set
+            {
+                _Source = value;
+                SourceChanged?.Invoke();
+            }
+        }
 
         private readonly MediaPlayer _Player;
         private readonly PlayerTransportControls _Controls;
         private readonly System.Timers.Timer _PositionTimer;
         private readonly IDispatcher? _Dispatcher;
+        private IMediaItem? _Source;
 
         #region Установка
 
@@ -166,8 +175,10 @@ namespace Acly.Player
         /// <param name="SourceStream"><inheritdoc/></param>
         public Task SetSource(Stream SourceStream)
         {
+            Source = new MediaItem();
+
             _Player.SetStreamSource(SourceStream.AsRandomAccessStream());
-            _Controls.SetMediaItem(new MediaItem());
+            _Controls.SetMediaItem(Source);
 
             return Task.CompletedTask;
         }
@@ -178,9 +189,10 @@ namespace Acly.Player
         public Task SetSource(string SourceUrl)
         {
             SourceSetted = true;
+            Source = new MediaItem();
 
             _Player.SetUriSource(new(SourceUrl, UriKind.Absolute));
-            _Controls.SetMediaItem(new MediaItem());
+            _Controls.SetMediaItem(Source);
 
             if (AutoPlay)
             {
@@ -195,6 +207,8 @@ namespace Acly.Player
         /// <param name="Item"><inheritdoc/></param>
         public async Task SetSource(IMediaItem Item)
         {
+            Source = Item;
+
             await SetSource(Item.AudioUrl);
             _Controls.SetMediaItem(Item);
         }

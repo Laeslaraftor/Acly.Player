@@ -73,6 +73,7 @@ bool IsPlaying { get; } // Проигрывается ли сейчас ауди
 bool SourceSetted { get; } // Установлено ли аудио
 bool AutoPlay { get; set; } // Автоматически проигрывать после смены аудио
 SimplePlayerState State { get; } // Состояние плеера
+IMediaItem Source { get; } // Информация о текущем аудио
 ```
 
 Управление плеером:

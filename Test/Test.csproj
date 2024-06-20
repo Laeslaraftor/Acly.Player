@@ -66,4 +66,10 @@
 	  <ProjectReference Include="..\Acly.Player\Acly.Player.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <MauiXaml Update="MiniPlayer.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
+	</ItemGroup>
+
 </Project>

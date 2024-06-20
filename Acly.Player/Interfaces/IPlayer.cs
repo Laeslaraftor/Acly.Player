@@ -18,6 +18,11 @@
         /// </summary>
         public event DisposePlayer? Disposed;
 
+        /// <summary>
+        /// Информация о текущем аудио
+        /// </summary>
+        public IMediaItem? Source { get; }
+
         #region Управление
 
         /// <summary>

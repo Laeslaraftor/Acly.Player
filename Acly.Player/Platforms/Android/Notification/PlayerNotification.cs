@@ -3,6 +3,7 @@ using Android;
 using Android.Content;
 using AndroidX.Core.Content;
 using Android.Content.PM;
+using AndroidX.Startup;
 
 namespace Acly.Player.Android
 {
@@ -36,12 +37,13 @@ namespace Acly.Player.Android
 
         private static Intent? _BrowserService;
         private static readonly List<CrossPlayer> _Players = [];
+        private static bool _Initialized;
 
         #region Установка
 
         public static void Init(MauiAppCompatActivity Activity, PlayerNotificationStyle Style, PlayerNotificationSettings Settings)
         {
-            if (ServicesStarted)
+            if (_Initialized)
             {
                 throw new InvalidOperationException("Уведомление уже инициализировано");
             }
@@ -49,11 +51,11 @@ namespace Acly.Player.Android
             ArgumentNullException.ThrowIfNull(Style, nameof(Style));
             ArgumentNullException.ThrowIfNull(Settings, nameof(Settings));
 
+            _Initialized = true;
+
             PlayerNotification.Activity = Activity;
             PlayerNotification.Style = Style;
             PlayerNotification.Settings = Settings;
-            
-            StartServices(Activity);
         }
 
         #endregion
@@ -74,6 +76,11 @@ namespace Acly.Player.Android
         {
             if (!ServicesStarted)
             {
+                if (Activity != null)
+                {
+                    StartServices(Activity);
+                }
+
                 return;
             }
 
@@ -127,6 +134,8 @@ namespace Acly.Player.Android
         {
             _Players.Remove((CrossPlayer)Player);
             Player.Disposed -= OnPlayerDisposed;
+
+            Stop();
         }
 
         #endregion

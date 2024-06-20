@@ -45,7 +45,6 @@ namespace Acly.Player.Android
                 }
                 else if (Event.KeyCode == Keycode.MediaNext)
                 {
-                    ;
                     SkipToNextRequest?.Invoke();
                 }
                 else if (Event.KeyCode == Keycode.MediaPrevious)

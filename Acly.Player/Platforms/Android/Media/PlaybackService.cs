@@ -13,10 +13,6 @@ namespace Acly.Player.Android.Media
     [Service(ForegroundServiceType = ForegroundService.TypeMediaPlayback, Exported = false), IntentFilter(["androidx.media2.session.MediaSessionService"])]
     public class PlaybackService : AndroidX.Media2.Session.MediaSessionService
     {
-        private static PlaybackService? _Current;
-        private static IMediaItem? _LastItem;
-        private static Bitmap? _LastItemImage;
-
         private MediaSession? _MediaSession;
         private MediaSessionCompat? _MediaCompat;
 
@@ -39,8 +35,10 @@ namespace Acly.Player.Android.Media
             MediaButtonReceiver.HandleIntent(_MediaCompat, new(this, typeof(PlaybackService)));
 
             MediaBrowserImplementation.Current.SessionToken = _MediaCompat.SessionToken;
+            IPlayer? FirstPlayer = PlayerNotification.FirstAvailablePlayer;
+            IMediaItem? MediaItem = FirstPlayer?.Source;
 
-            StartForeground(PlayerNotification.Settings.Id, BuildNotification(BuildMediaNotification(_MediaCompat, null, PlayerNotification.FirstAvailablePlayer)));
+            StartForeground(PlayerNotification.Settings.Id, BuildNotification(BuildMediaNotification(_MediaCompat, MediaItem, FirstPlayer)));
         }
         public override void OnDestroy()
         {
@@ -56,7 +54,7 @@ namespace Acly.Player.Android.Media
 
         #region Уведомление
 
-        public static async void CreateNotification(IMediaItem? Item, ISimplePlayer Player)
+        public static async void CreateNotification(IMediaItem? Item, IPlayer Player)
         {
             if (_Current == null)
             {
@@ -94,8 +92,10 @@ namespace Acly.Player.Android.Media
         }
         private static void CreateChannel()
         {
-            NotificationChannel Channel = new(PlayerNotification.Settings.ChannelId, PlayerNotification.Settings.ChannelName, NotificationImportance.High);
-            Channel.Description = PlayerNotification.Settings.ChannelDescription;
+            NotificationChannel Channel = new(PlayerNotification.Settings.ChannelId, PlayerNotification.Settings.ChannelName, NotificationImportance.High)
+            {
+                Description = PlayerNotification.Settings.ChannelDescription
+            };
 
             if (PlayerNotification.Activity != null)
             {
@@ -224,6 +224,23 @@ namespace Acly.Player.Android.Media
         {
             return null;
         }
+
+        #endregion
+
+        #region Делегаты
+
+        public delegate void ServiceCreated(PlaybackService Service);
+        public delegate void Destroy(PlaybackService Service);
+
+        #endregion
+
+        //--
+
+        #region Статика
+
+        private static PlaybackService? _Current;
+        private static IMediaItem? _LastItem;
+        private static Bitmap? _LastItemImage;
 
         #endregion
     }
