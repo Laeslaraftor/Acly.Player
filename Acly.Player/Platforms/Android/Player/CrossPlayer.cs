@@ -1,4 +1,5 @@
 ﻿using Acly.Player.Android;
+using Acly.Tokens;
 using Android.Media;
 using Android.OS;
 
@@ -145,6 +146,7 @@ namespace Acly.Player
         private float _Volume = 1;
         private Handler? _Timer = new();
         private bool _DisableCompletedEvent;
+        private Token? _SourceSettingToken;
 
         #region Установка
 
@@ -152,23 +154,21 @@ namespace Acly.Player
         /// <inheritdoc/>
         /// </summary>
         /// <param name="Data"><inheritdoc/></param>
-        public async Task SetSource(byte[] Data)
+        public Task SetSource(byte[] Data)
         {
-            _DisableCompletedEvent = true;
             if (SourceSetted)
             {
                 _Player.Reset();
             }
 
-            if (!await TrySetSourceAndPrepare(Data))
+            SetSourceLoop(async () =>
             {
-                await SetSource(Data);
-                return;
-            }
-            
+                return await TrySetSourceAndPrepare(Data);
+            });
 
             InvokeSourceChangedEvent();
-            _DisableCompletedEvent = false;
+
+            return Task.CompletedTask;
         }
         /// <summary>
         /// <inheritdoc/>
@@ -198,9 +198,8 @@ namespace Acly.Player
         /// <inheritdoc/>
         /// </summary>
         /// <param name="Item"><inheritdoc/></param>
-        public async Task SetSource(IMediaItem Item)
+        public Task SetSource(IMediaItem Item)
         {
-            _DisableCompletedEvent = true;
             Source = Item;
             UpdateNotification();
 
@@ -209,13 +208,30 @@ namespace Acly.Player
                 _Player.Reset();
             }
 
-            if (!await TrySetSourceAndPrepare(Item.AudioUrl))
+            SetSourceLoop(async () =>
             {
-                await SetSource(Item);
+                return await TrySetSourceAndPrepare(Item.AudioUrl);
+            });
+
+            InvokeSourceChangedEvent();
+
+            return Task.CompletedTask;
+        }
+
+        private async void SetSourceLoop(Func<Task<bool>> SettingMethod)
+        {
+            Token SettingToken = new();
+            _DisableCompletedEvent = true;
+            _SourceSettingToken = SettingToken;
+
+            while (!await SettingMethod() && _SourceSettingToken == SettingToken)
+            {
+            }
+            if (_SourceSettingToken != SettingToken)
+            {
                 return;
             }
 
-            InvokeSourceChangedEvent();
             _DisableCompletedEvent = false;
         }
 
