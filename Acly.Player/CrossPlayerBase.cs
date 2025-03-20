@@ -96,6 +96,10 @@
                 }
             }
         }
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
+        public virtual TimeSpan PositionUpdateInterval { get; set; } = TimeSpan.FromSeconds(0.05);
 
         private SimplePlayerState _State = SimplePlayerState.Stopped;
         private IMediaItem? _Source;

@@ -25,11 +25,10 @@ namespace Acly.Player
 
             _PositionTimer = new()
             {
-                Interval = 400,
+                Interval = PositionUpdateInterval.TotalMilliseconds,
                 AutoReset = true
             };
             _PositionTimer.Elapsed += OnPositionTimerElapsed;
-
             _PositionTimer.Start();
         }
         /// <summary>
@@ -58,7 +57,6 @@ namespace Acly.Player
         /// <inheritdoc/>
         /// </summary>
         public override TimeSpan Duration => _Player.NaturalDuration;
-
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
@@ -82,6 +80,18 @@ namespace Acly.Player
         {
             get => _Player.IsLoopingEnabled;
             set => _Player.IsLoopingEnabled = value;
+        }
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
+        public override TimeSpan PositionUpdateInterval 
+        { 
+            get => base.PositionUpdateInterval; 
+            set
+            {
+                base.PositionUpdateInterval = value;
+                _PositionTimer.Interval = value.TotalMilliseconds;
+            } 
         }
 
         private readonly MediaPlayer _Player;

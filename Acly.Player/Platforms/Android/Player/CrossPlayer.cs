@@ -370,7 +370,7 @@ namespace Acly.Player
                 InvokePositionChangedEvent(Position);
             }
 
-            _Timer?.PostDelayed(OnTimerTick, 400);
+            _Timer?.PostDelayed(OnTimerTick, (long)PositionUpdateInterval.TotalMilliseconds);
         }
 
         #endregion

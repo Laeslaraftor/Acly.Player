@@ -26,6 +26,10 @@
         /// Информация о текущем аудио
         /// </summary>
         public IMediaItem? Source { get; }
+        /// <summary>
+        /// Интервал обновления текущей позиции проигрывания аудиофайла
+        /// </summary>
+        public TimeSpan PositionUpdateInterval { get; set; }
 
         #region Делегаты
 
