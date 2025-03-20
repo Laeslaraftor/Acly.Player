@@ -100,6 +100,10 @@
         /// <inheritdoc/>
         /// </summary>
         public virtual TimeSpan PositionUpdateInterval { get; set; } = TimeSpan.FromSeconds(0.05);
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
+        public abstract int CaptureDataSize { get; set; }
 
         private SimplePlayerState _State = SimplePlayerState.Stopped;
         private IMediaItem? _Source;
@@ -175,6 +179,13 @@
         /// <param name="Window"><inheritdoc/></param>
         /// <returns><inheritdoc/></returns>
         public abstract float[] GetSpectrumData(int Size, int SmoothAmount, SpectrumWindow Window = SpectrumWindow.Rectangular);
+
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
+        /// <param name="Size"><inheritdoc/></param>
+        /// <returns><inheritdoc/></returns>
+        public abstract float[] GetWaveformData(int Size);
 
         #endregion
 

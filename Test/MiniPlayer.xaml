@@ -4,6 +4,7 @@
              x:Class="Test.MiniPlayer">
     <Border BackgroundColor="White" StrokeShape="RoundRectangle 8" StrokeThickness="0" HeightRequest="250" MaximumWidthRequest="400">
         <Grid>
+            <GraphicsView x:Name="Visualizer"/>
             <Grid x:Name="InputBlock">
                 <Grid.RowDefinitions>
                     <RowDefinition/>

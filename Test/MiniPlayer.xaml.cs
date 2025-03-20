@@ -1,4 +1,7 @@
 using Acly.Player;
+#if WINDOWS
+using Acly.Player.Windows;
+#endif
 
 namespace Test;
 
@@ -16,6 +19,9 @@ public partial class MiniPlayer : ContentView
     public event Action<MiniPlayer>? Removed;
 
     private CrossPlayer? _Player;
+#if WINDOWS
+    private SpectrumDrawable _SpectrumDrawable = new();
+#endif
 
     #region Плеер
 
@@ -100,31 +106,37 @@ public partial class MiniPlayer : ContentView
 
     private void OnSkipToPreviousButtonClicked(object sender, EventArgs e)
     {
-        OnSkippedToPrevious();
+        OnSkippedToPrevious(_Player);
     }
     private void OnSkipToNextButtonClicked(object sender, EventArgs e)
     {
-        OnSkippedToNext();
+        OnSkippedToNext(_Player);
     }
     private void OnChangeStateButtonClicked(object sender, EventArgs e)
     {
-        _Player?.SwitchState();
+        if (_Player.IsPlaying)
+        {
+            _Player.Pause();
+            return;
+        }
+
+        _Player.Play();
     }
 
     #endregion
 
     #region События плеера
 
-    private void OnSkippedToPrevious()
+    private void OnSkippedToPrevious(IPlayer Player)
     {
         MainPage.Alert("Фокус", "Назад", "Замётано");
     }
-    private void OnSkippedToNext()
+    private void OnSkippedToNext(IPlayer Player)
     {
         MainPage.Alert("Фокус", "Далее", "Замётано");
     }
 
-    private void OnStateChanged(SimplePlayerState State)
+    private void OnStateChanged(ISimplePlayer Player, SimplePlayerState State)
     {
         Dispatcher.Dispatch(() =>
         {
@@ -142,7 +154,7 @@ public partial class MiniPlayer : ContentView
             }
         });
     }
-    private void OnPositionChanged(TimeSpan Position)
+    private void OnPositionChanged(IPlayer Player, TimeSpan Position)
     {
 #pragma warning disable CS8602 // Разыменование вероятной пустой ссылки.
         TimeSpan Duration = _Player.Duration;
@@ -153,6 +165,12 @@ public partial class MiniPlayer : ContentView
         PlayerBlockPositionSlider.Maximum = Duration.TotalSeconds;
         PlayerBlockPositionSliderUser.Maximum = Duration.TotalSeconds;
         PlayerBlockPositionSlider.Value = Position.TotalSeconds;
+
+#if WINDOWS
+        _SpectrumDrawable.Fft = _Player.GetSpectrumData(6);
+        Visualizer.Drawable = null;
+        Visualizer.Drawable = _SpectrumDrawable;
+#endif
     }
     private void OnPlayerPositionSliderValueChanged(object sender, ValueChangedEventArgs e)
     {
@@ -165,5 +183,5 @@ public partial class MiniPlayer : ContentView
         _Player.Position = Position;
     }
 
-    #endregion
+#endregion
 }

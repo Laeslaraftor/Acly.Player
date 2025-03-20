@@ -1,13 +1,16 @@
 ﻿using Acly.Player.Android;
+using Acly.Player.Spectrum;
 using Acly.Tokens;
 using Android.Media;
 using Android.OS;
+using Acly.Platforms;
 
 namespace Acly.Player
 {
     /// <summary>
     /// Плеер для Android
     /// </summary>
+    [SimplePlayerImplementation(RuntimePlatform.Android)]
     public class CrossPlayer : CrossPlayerBase
     {
         /// <summary>
@@ -16,6 +19,10 @@ namespace Acly.Player
         public CrossPlayer()
         {
             _Player = new();
+            _Analyzer = new(_Player, true, true)
+            {
+                Capacity = 1024
+            };
             _Player.Prepared += OnPlayerPrepared;
             _Player.Completion += OnSourceCompleted;
 
@@ -106,8 +113,17 @@ namespace Acly.Player
                 UpdateNotification();
             }
         }
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
+        public override int CaptureDataSize
+        {
+            get => _Analyzer.Capacity;
+            set => _Analyzer.Capacity = value;
+        }
 
         private readonly MediaPlayer _Player;
+        private readonly AudioAnalyzer _Analyzer;
         private TimeSpan _CurrentDuration;
         private float _Volume = 1;
         private Handler? _Timer = new();
@@ -241,6 +257,7 @@ namespace Acly.Player
         public override void Release()
         {
             _Timer?.Dispose();
+            _Analyzer.Dispose();
             _Player.Release();
 
             _Timer = null;
@@ -270,7 +287,33 @@ namespace Acly.Player
         /// <exception cref="NotImplementedException"></exception>
         public override float[] GetSpectrumData(int Size, int SmoothAmount, SpectrumWindow Window = SpectrumWindow.Rectangular)
         {
-            throw new NotImplementedException();
+            if (Size >= CaptureDataSize)
+            {
+                throw new ArgumentException("Запрошено больше данных чем захватывается!");
+            }
+
+            float[] Result = _Analyzer.GetSpectrumData(Size);
+
+            if (SmoothAmount > 0)
+            {
+                Result = ArrayWork.Smooth(Result, SmoothAmount);
+            }
+
+            return Result;
+        }
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
+        /// <param name="Size"><inheritdoc/></param>
+        /// <returns><inheritdoc/></returns>
+        public override float[] GetWaveformData(int Size)
+        {
+            if (Size >= CaptureDataSize)
+            {
+                throw new ArgumentException("Запрошено больше данных чем захватывается!");
+            }
+
+            return _Analyzer.GetWaveformData(Size);
         }
 
         private async Task<bool> TrySetSourceAndPrepare(byte[] Data)

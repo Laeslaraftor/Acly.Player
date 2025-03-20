@@ -1,12 +1,14 @@
-﻿using Acly.Player.Windows;
-using Microsoft.Maui.Layouts;
+﻿using Acly.Player.Spectrum;
+using Acly.Player.Windows;
 using Windows.Media.Playback;
+using Acly.Platforms;
 
 namespace Acly.Player
 {
     /// <summary>
     /// Плеер для Windows
     /// </summary>
+    [SimplePlayerImplementation(RuntimePlatform.Windows)]
     public class CrossPlayer : CrossPlayerBase
     {
         /// <summary>
@@ -14,6 +16,10 @@ namespace Acly.Player
         /// </summary>
         public CrossPlayer()
         {
+            _Analyzer = new()
+            {
+                Capacity = 1024
+            };
             _Player = new();
             _Player.MediaEnded += OnPlayerMediaEnded;
             _Player.CurrentStateChanged += OnPlayerCurrentStateChanged;
@@ -30,6 +36,8 @@ namespace Acly.Player
             };
             _PositionTimer.Elapsed += OnPositionTimerElapsed;
             _PositionTimer.Start();
+
+            _Analyzer.Start();
         }
         /// <summary>
         /// Очистка!
@@ -93,9 +101,18 @@ namespace Acly.Player
                 _PositionTimer.Interval = value.TotalMilliseconds;
             } 
         }
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
+        public override int CaptureDataSize
+        {
+            get => _Analyzer.Capacity;
+            set => _Analyzer.Capacity = value;
+        }
 
         private readonly MediaPlayer _Player;
         private readonly PlayerTransportControls _Controls;
+        private readonly AudioAnalyzer _Analyzer;
         private readonly System.Timers.Timer _PositionTimer;
         private readonly IDispatcher? _Dispatcher;
 
@@ -193,6 +210,7 @@ namespace Acly.Player
             _PositionTimer.Enabled = false;
             _PositionTimer.Stop();
             _PositionTimer.Dispose();
+            _Analyzer.Dispose();
 
             _Player.Dispose();
             _Controls.Dispose();
@@ -214,7 +232,29 @@ namespace Acly.Player
         /// <exception cref="NotImplementedException"></exception>
         public override float[] GetSpectrumData(int Size, int SmoothAmount, SpectrumWindow Window = SpectrumWindow.Rectangular)
         {
-            throw new NotImplementedException();
+            if (Size >= 512)
+            {
+                throw new ArgumentException("Максимальный доступный для текущей платформы размер - 512");
+            }
+
+            float[] Result = _Analyzer.GetSpectrumData(Size);
+            
+            if (SmoothAmount > 0)
+            {
+                Result = ArrayWork.Smooth(Result, SmoothAmount);
+            }
+
+            return Result;
+        }
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
+        /// <param name="Size"><inheritdoc/></param>
+        /// <returns><inheritdoc/></returns>
+        public override float[] GetWaveformData(int Size)
+        {
+            _Analyzer.AudioFile = Source?.AudioUrl;
+            return _Analyzer.GetWaveformData(Size);
         }
 
         #endregion
