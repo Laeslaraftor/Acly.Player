@@ -8,29 +8,24 @@
         /// <summary>
         /// Вызывается при пропуски до следующей песни
         /// </summary>
-        public event Action? SkippedToNext;
+        public event PlayerEvent? SkippedToNext;
         /// <summary>
         /// Вызывается при перемотки до предыдущей песни
         /// </summary>
-        public event Action? SkippedToPrevious;
+        public event PlayerEvent? SkippedToPrevious;
         /// <summary>
         /// Вызывается при очистке экземпляра плеера
         /// </summary>
         public event DisposePlayer? Disposed;
+        /// <summary>
+        /// Вызывается при изменении текущей проигрываемой позиции
+        /// </summary>
+        public event PlayerTimeEvent? PositionChanged;
 
         /// <summary>
         /// Информация о текущем аудио
         /// </summary>
         public IMediaItem? Source { get; }
-
-        #region Управление
-
-        /// <summary>
-        /// Возобновить / пауза
-        /// </summary>
-        public void SwitchState();
-
-        #endregion
 
         #region Делегаты
 

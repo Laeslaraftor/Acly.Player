@@ -1,4 +1,5 @@
 ﻿using Acly.Player.Windows;
+using Microsoft.Maui.Layouts;
 using Windows.Media.Playback;
 
 namespace Acly.Player
@@ -6,7 +7,7 @@ namespace Acly.Player
     /// <summary>
     /// Плеер для Windows
     /// </summary>
-    public class CrossPlayer : IPlayer
+    public class CrossPlayer : CrossPlayerBase
     {
         /// <summary>
         /// Создать новый экземпляр плеера для Windows
@@ -14,19 +15,13 @@ namespace Acly.Player
         public CrossPlayer()
         {
             _Player = new();
-            _Player.MediaEnded += (p, obj) =>
-            {
-                SourceEnded?.Invoke();
-            };
-            _Player.CurrentStateChanged += (p, obj) =>
-            {
-                StateChanged?.Invoke(State);
-            };
+            _Player.MediaEnded += OnPlayerMediaEnded;
+            _Player.CurrentStateChanged += OnPlayerCurrentStateChanged;
 
             _Dispatcher = Dispatcher.GetForCurrentThread();
             _Controls = new(this, _Player, _Dispatcher);
-            _Controls.SkipToNextRequest += OnSkipToNextRequest;
-            _Controls.SkipToPreviousRequest += OnSkipToPreviousRequest;
+            _Controls.SkipToNextRequest += InvokeSkippedToNextEvent;
+            _Controls.SkipToPreviousRequest += InvokeSkippedToPreviousEvent;
 
             _PositionTimer = new()
             {
@@ -37,40 +32,24 @@ namespace Acly.Player
 
             _PositionTimer.Start();
         }
+        /// <summary>
+        /// Очистка!
+        /// </summary>
+        ~CrossPlayer()
+        {
+            try
+            {
+                Release();
+            }
+            catch
+            {
+            }
+        }        
 
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public event Action<SimplePlayerState>? StateChanged;
-        /// <summary>
-        /// <inheritdoc/>
-        /// </summary>
-        public event Action? SourceChanged;
-        /// <summary>
-        /// <inheritdoc/>
-        /// </summary>
-        public event Action? SourceEnded;
-        /// <summary>
-        /// <inheritdoc/>
-        /// </summary>
-        public event Action<TimeSpan>? PositionChanged;
-        /// <summary>
-        /// <inheritdoc/>
-        /// </summary>
-        public event Action? SkippedToNext;
-        /// <summary>
-        /// <inheritdoc/>
-        /// </summary>
-        public event Action? SkippedToPrevious;
-        /// <summary>
-        /// <inheritdoc/>
-        /// </summary>
-        public event IPlayer.DisposePlayer? Disposed;
-
-        /// <summary>
-        /// <inheritdoc/>
-        /// </summary>
-        public TimeSpan Position
+        public override TimeSpan Position
         {
             get => _Player.Position;
             set => _Player.Position = value;
@@ -78,12 +57,12 @@ namespace Acly.Player
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public TimeSpan Duration => _Player.NaturalDuration;
+        public override TimeSpan Duration => _Player.NaturalDuration;
 
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public float Speed
+        public override float Speed
         {
             get => (float)_Player.PlaybackRate;
             set => _Player.PlaybackRate = (double)value;
@@ -91,7 +70,7 @@ namespace Acly.Player
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public float Volume
+        public override float Volume
         {
             get => (float)_Player.Volume;
             set => _Player.Volume = (double)value;
@@ -99,64 +78,16 @@ namespace Acly.Player
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public bool Loop
+        public override bool Loop
         {
             get => _Player.IsLoopingEnabled;
             set => _Player.IsLoopingEnabled = value;
-        }
-
-        /// <summary>
-        /// <inheritdoc/>
-        /// </summary>
-        public bool IsPlaying => State == SimplePlayerState.Playing;
-        /// <summary>
-        /// <inheritdoc/>
-        /// </summary>
-        public bool SourceSetted { get; private set; }
-        /// <summary>
-        /// <inheritdoc/>
-        /// </summary>
-        public bool AutoPlay { get; set; }
-        /// <summary>
-        /// <inheritdoc/>
-        /// </summary>
-        public SimplePlayerState State
-        {
-            get
-            {
-                SimplePlayerState result = SimplePlayerState.Stopped;
-
-                switch (_Player.CurrentState)
-                {
-                    case MediaPlayerState.Playing:
-                        result = SimplePlayerState.Playing;
-                        break;
-                    case MediaPlayerState.Paused:
-                        result = SimplePlayerState.Paused;
-                        break;
-                }
-
-                return result;
-            }
-        }
-        /// <summary>
-        /// <inheritdoc/>
-        /// </summary>
-        public IMediaItem? Source
-        {
-            get => _Source;
-            private set
-            {
-                _Source = value;
-                SourceChanged?.Invoke();
-            }
         }
 
         private readonly MediaPlayer _Player;
         private readonly PlayerTransportControls _Controls;
         private readonly System.Timers.Timer _PositionTimer;
         private readonly IDispatcher? _Dispatcher;
-        private IMediaItem? _Source;
 
         #region Установка
 
@@ -164,7 +95,7 @@ namespace Acly.Player
         /// <inheritdoc/>
         /// </summary>
         /// <param name="Data"><inheritdoc/></param>
-        public async Task SetSource(byte[] Data)
+        public override async Task SetSource(byte[] Data)
         {
             Stream DataStream = Data.ToStream();
             await SetSource(DataStream);
@@ -173,7 +104,7 @@ namespace Acly.Player
         /// <inheritdoc/>
         /// </summary>
         /// <param name="SourceStream"><inheritdoc/></param>
-        public Task SetSource(Stream SourceStream)
+        public override Task SetSource(Stream SourceStream)
         {
             Source = new MediaItem();
 
@@ -186,9 +117,8 @@ namespace Acly.Player
         /// <inheritdoc/>
         /// </summary>
         /// <param name="SourceUrl"><inheritdoc/></param>
-        public Task SetSource(string SourceUrl)
+        public override Task SetSource(string SourceUrl)
         {
-            SourceSetted = true;
             Source = new MediaItem();
 
             _Player.SetUriSource(new(SourceUrl, UriKind.Absolute));
@@ -205,7 +135,7 @@ namespace Acly.Player
         /// <inheritdoc/>
         /// </summary>
         /// <param name="Item"><inheritdoc/></param>
-        public async Task SetSource(IMediaItem Item)
+        public override async Task SetSource(IMediaItem Item)
         {
             Source = Item;
 
@@ -220,43 +150,36 @@ namespace Acly.Player
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public void Pause()
+        public override void Pause()
         {
             _Player.Pause();
         }
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public void Play()
+        public override void Play()
         {
             _Player.Play();
         }
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public void Stop()
+        public override void Stop()
         {
             Pause();
         }
-        /// <summary>
-        /// <inheritdoc/>
-        /// </summary>
-        public void SwitchState()
-        {
-            if (IsPlaying)
-            {
-                Pause();
-                return;
-            }
-
-            Play();
-        }
 
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public void Release()
+        public override void Release()
         {
+            _Player.MediaEnded -= OnPlayerMediaEnded;
+            _Player.CurrentStateChanged -= OnPlayerCurrentStateChanged;
+            _PositionTimer.Elapsed -= OnPositionTimerElapsed;
+            _Controls.SkipToNextRequest -= InvokeSkippedToNextEvent;
+            _Controls.SkipToPreviousRequest -= InvokeSkippedToPreviousEvent;
+
             _PositionTimer.Enabled = false;
             _PositionTimer.Stop();
             _PositionTimer.Dispose();
@@ -264,7 +187,7 @@ namespace Acly.Player
             _Player.Dispose();
             _Controls.Dispose();
 
-            Disposed?.Invoke(this);
+            InvokeDisposedEvent();
         }
 
         #endregion
@@ -275,22 +198,11 @@ namespace Acly.Player
         /// <inheritdoc/>
         /// </summary>
         /// <param name="Size"><inheritdoc/></param>
-        /// <param name="Window"><inheritdoc/></param>
-        /// <returns><inheritdoc/></returns>
-        /// <exception cref="NotImplementedException"></exception>
-        public float[] GetSpectrumData(int Size, SpectrumWindow Window = SpectrumWindow.Rectangular)
-        {
-            throw new NotImplementedException();
-        }
-        /// <summary>
-        /// <inheritdoc/>
-        /// </summary>
-        /// <param name="Size"><inheritdoc/></param>
         /// <param name="SmoothAmount"><inheritdoc/></param>
         /// <param name="Window"><inheritdoc/></param>
         /// <returns><inheritdoc/></returns>
         /// <exception cref="NotImplementedException"></exception>
-        public float[] GetSpectrumData(int Size, int SmoothAmount, SpectrumWindow Window = SpectrumWindow.Rectangular)
+        public override float[] GetSpectrumData(int Size, int SmoothAmount, SpectrumWindow Window = SpectrumWindow.Rectangular)
         {
             throw new NotImplementedException();
         }
@@ -308,17 +220,38 @@ namespace Acly.Player
 
             await _Dispatcher.DispatchAsync(() =>
             {
-                PositionChanged?.Invoke(Position);
+                InvokePositionChangedEvent(Position);
             });
         }
 
-        private void OnSkipToPreviousRequest()
+        private void OnPlayerMediaEnded(MediaPlayer sender, object args)
         {
-            SkippedToPrevious?.Invoke();
+            InvokeSourceEndedEvent();
         }
-        private void OnSkipToNextRequest()
+        private void OnPlayerCurrentStateChanged(MediaPlayer sender, object args)
         {
-            SkippedToNext?.Invoke();
+            State = MediaToSimpleState(_Player.CurrentState);
+        }
+
+        #endregion
+
+        #region Статика
+
+        private static SimplePlayerState MediaToSimpleState(MediaPlayerState State)
+        {
+            SimplePlayerState result = SimplePlayerState.Stopped;
+
+            switch (State)
+            {
+                case MediaPlayerState.Playing:
+                    result = SimplePlayerState.Playing;
+                    break;
+                case MediaPlayerState.Paused:
+                    result = SimplePlayerState.Paused;
+                    break;
+            }
+
+            return result;
         }
 
         #endregion

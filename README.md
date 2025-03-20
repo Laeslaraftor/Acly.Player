@@ -52,12 +52,12 @@ CrossPlayer.InitNotification(MauiAppCompatActivity, PlayerNotificationStyle, Pla
 Плеер предлагает следующие события:
 
 ```c#
-event Action<SimplePlayerState>? StateChanged; // Вызывается при изменении состояния плеера
-event Action? SourceChanged; // Вызывается при изменении источника
-event Action? SourceEnded; // Вызывается при окончании источника
-event Action<TimeSpan>? PositionChanged; // Вызывается при изменении текущего времени проигрывания
-event Action? SkippedToNext; // Вызывается при пропуске до следующей песни
-event Action? SkippedToPrevious; // Вызывается при перемотки до предыдущей песни
+event SimplePlayerStateEvent? StateChanged; // Вызывается при изменении состояния плеера
+event SimplePlayerEvent? SourceChanged; // Вызывается при изменении источника
+event SimplePlayerEvent? SourceEnded; // Вызывается при окончании источника
+event PlayerTimeEvent? PositionChanged; // Вызывается при изменении текущего времени проигрывания
+event PlayerEvent? SkippedToNext; // Вызывается при пропуске до следующей песни
+event PlayerEvent? SkippedToPrevious; // Вызывается при перемотки до предыдущей песни
 event IPlayer.DisposePlayer? Disposed; // Вызывается при очистке
 ```
 
@@ -82,7 +82,6 @@ IMediaItem Source { get; } // Информация о текущем аудио
 void Pause(); // Пауза
 void Play(); // Воспроизвести
 void Stop(); // Остановить
-void SwitchState(); // Пауза / воспроизести
 
 void Release(); // Очистить
 ```
