@@ -1,5 +1,6 @@
 ﻿
 using Acly.Player;
+using System.Diagnostics;
 
 namespace Test
 {
@@ -35,6 +36,12 @@ namespace Test
                 Artist = "Clarx, Harddope",
                 AudioUrl = "https://acly.ru/resourse/user-music/0e6791e757d2046d0fcd81ea7fb42d32Clarx,-Harddope-Castle.mp3",
                 ImageUrl = "https://cdns-images.dzcdn.net/images/cover/c19ce14b22aaa8784b53cb0554278eb9/500x500-000000-80-0-0.jpg"
+            },
+            new() {
+                Title = "Living Life, in the Night",
+                Artist = "Neptunica, Matthew Clanton",
+                AudioUrl = @"C:\Users\Mdely\OneDrive\Documents\Openbeat\Songs\cnHxQYSgpkX5\audio.ogg",
+                ImageUrl = @"C:\Users\Mdely\OneDrive\Documents\Openbeat\Songs\cnHxQYSgpkX5\cover.jpg"
             },
             new()
         ];

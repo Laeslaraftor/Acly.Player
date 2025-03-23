@@ -4,6 +4,11 @@ using Android.Graphics;
 using Android.Support.V4.Media;
 using System.Diagnostics;
 #elif WINDOWS
+using Acly.Player.Server;
+using System.Diagnostics;
+using System.Threading.Tasks;
+using System.Windows.Forms.VisualStyles;
+using Windows.Storage;
 using Windows.Storage.Streams;
 #endif
 
@@ -60,14 +65,40 @@ namespace Acly.Player
         /// Получить обложку
         /// </summary>
         /// <returns>Картинка обложки</returns>
-        public static RandomAccessStreamReference? GetImage(this IMediaItem MediaItem)
+        public static RandomAccessStreamReference? GetImage(this IMediaItem MediaItem, IPlayer Player)
         {
             if (MediaItem.ImageUrl == null)
             {
+                ImagesServer.Start();
+                RandomAccessStreamReference.CreateFromUri(ImagesServer.GetEmptyLink());
                 return null;
             }
 
-            return RandomAccessStreamReference.CreateFromUri(new(MediaItem.ImageUrl, UriKind.Absolute));
+            Uri? FileUri = null;
+
+            if (File.Exists(MediaItem.AudioUrl))
+            {
+                ImagesServer.Start();
+                var ImageToken = ImagesServer.AddImage(Player, MediaItem.ImageUrl);
+                FileUri = ImagesServer.GetLink(ImageToken);
+            }
+
+            FileUri ??= new(MediaItem.ImageUrl, UriKind.Absolute);
+
+            return RandomAccessStreamReference.CreateFromUri(FileUri);
+        }
+
+        private static string GetFileName(this string FilePath)
+        {
+            FilePath = FilePath.Replace(@"\", "/");
+            var Parts = FilePath.Split('/');
+
+            if (Parts.Length > 0)
+            {
+                return Parts[^1];
+            }
+
+            return string.Empty;
         }
 
 #endif

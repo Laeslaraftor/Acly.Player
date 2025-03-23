@@ -81,7 +81,7 @@ public partial class MiniPlayer : ContentView
         };
         string Title = InputBlockTitle.Text.Trim();
         string Artist = InputBlockArtist.Text.Trim();
-        string Image = InputBlockImage.Text.Trim();
+        string? Image = InputBlockImage.Text?.Trim();
 
         if (Title.Length > 0)
         {
@@ -91,7 +91,7 @@ public partial class MiniPlayer : ContentView
         {
             Item.Artist = Artist;
         }
-        if (Image.Length > 0)
+        if (Image != null && Image.Length > 0)
         {
             Item.ImageUrl = Image;
         }

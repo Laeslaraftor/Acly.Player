@@ -64,9 +64,9 @@ namespace Acly.Player.Windows
 
         public float[] GetSpectrumData(int Size)
         {
-            if (Size >= 512)
+            if (Size >= _LastFft.Length)
             {
-                throw new ArgumentException("Максимальный доступный размер - 512");
+                throw new ArgumentException($"Максимальный доступный размер - {_LastFft}");
             }
             if (Size == -1)
             {

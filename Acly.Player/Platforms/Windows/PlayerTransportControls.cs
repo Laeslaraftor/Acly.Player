@@ -77,7 +77,7 @@ namespace Acly.Player.Windows
         {
             Updater.MusicProperties.Title = Item.Title;
             Updater.MusicProperties.Artist = Item.Artist;
-            Updater.Thumbnail = Item.GetImage();
+            Updater.Thumbnail = Item.GetImage(_Player);
 
             Updater.Update();
         } 

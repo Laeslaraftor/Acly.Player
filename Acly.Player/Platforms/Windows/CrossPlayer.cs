@@ -232,11 +232,6 @@ namespace Acly.Player
         /// <exception cref="NotImplementedException"></exception>
         public override float[] GetSpectrumData(int Size, int SmoothAmount, SpectrumWindow Window = SpectrumWindow.Rectangular)
         {
-            if (Size >= 512)
-            {
-                throw new ArgumentException("Максимальный доступный для текущей платформы размер - 512");
-            }
-
             float[] Result = _Analyzer.GetSpectrumData(Size);
             
             if (SmoothAmount > 0)
