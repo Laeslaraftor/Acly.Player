@@ -38,7 +38,23 @@ namespace Acly.Player.Android
         public int Capacity
         {
             get => _Visualizer.CaptureSize;
-            set => _Visualizer.SetCaptureSize(value);
+            set
+            {
+                try
+                {
+                    _Visualizer.SetEnabled(false);
+                    _Visualizer.SetCaptureSize(value);
+                    _Visualizer.SetEnabled(true);
+                }
+                catch (Exception Error)
+                {
+                    StringBuilder Builder = new();
+                    Builder.Append("Не удалось изменить размер захватываемых данных!");
+                    AppendRecursive(Builder, Error);
+
+                    Debug.WriteLine(Builder.ToString());
+                }
+            }
         }
 
         private readonly Visualizer _Visualizer;
