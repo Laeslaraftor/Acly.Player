@@ -1,5 +1,11 @@
 ﻿using Android.Media;
 using Android.Media.Audiofx;
+using System.Diagnostics.CodeAnalysis;
+using System.Text;
+using Android;
+using Android.Content.PM;
+using Application = Android.App.Application;
+using System.Diagnostics;
 
 namespace Acly.Player.Android
 {
@@ -12,6 +18,9 @@ namespace Acly.Player.Android
             _CaptureCallback = new();
             _CaptureCallback.FftCaptured += OnFftCaptured;
             _CaptureCallback.WaveFormCaptured += OnWaveFormCaptured;
+
+            _Visualizer.SetEnabled(false);
+            _Equalizer.SetEnabled(false);
 
             _Visualizer.SetScalingMode(VisualizerScalingMode.AsPlayed);
             _Visualizer.SetMeasurementMode(VisualizerMeasurementMode.PeakRms);
@@ -60,7 +69,7 @@ namespace Acly.Player.Android
 
             _CaptureCallback.FftCaptured -= OnFftCaptured;
             _CaptureCallback.WaveFormCaptured -= OnWaveFormCaptured;
-            
+
             _Equalizer.SetEnabled(false);
             _Visualizer.SetEnabled(false);
             _Visualizer.SetDataCaptureListener(null, 0, false, false);
@@ -111,6 +120,61 @@ namespace Acly.Player.Android
         private void OnFftCaptured(Visualizer? Visualizer, byte[]? Data, int SamplingRate)
         {
             _LastFft = Data;
+        }
+
+        #endregion
+
+        #region Константы
+
+        private const string _IgnoreMessage = "Это сообщение можно проигнорировать, если вам не нужна визуализация аудио.";
+
+        #endregion
+
+        #region Статика
+
+        public static bool TryCreate(MediaPlayer Player, bool Waveform, bool Fft, [NotNullWhen(true)] out AudioAnalyzer? Analyzer)
+        {
+            Analyzer = null;
+            var Result = Application.Context.CheckCallingOrSelfPermission(Manifest.Permission.RecordAudio);
+
+            if (Result == Permission.Denied)
+            {
+                StringBuilder Builder = new();
+                Builder.AppendLine($"Анализатор аудио не был создан, так как не было выдано разрешение {Manifest.Permission.RecordAudio}!");
+                Builder.AppendLine(_IgnoreMessage);
+                Debug.WriteLine(Builder.ToString());
+
+                return false;
+            }
+
+            try
+            {
+                Analyzer = new(Player, Waveform, Fft);
+            }
+            catch (Exception Error)
+            {
+                StringBuilder Builder = new();
+                Builder.AppendLine("При создании анализатора аудио произошла ошибка!");
+                Builder.AppendLine("Убедитесь, что у вас установлены разрешения RECORD_AUDIO и MODIFY_AUDIO_SETTINGS, а также что пользователь дал своё согласие.");
+                Builder.AppendLine(_IgnoreMessage);
+                AppendRecursive(Builder, Error);
+            }
+
+            return Analyzer != null;
+        }
+
+        private static void AppendRecursive(StringBuilder Builder, Exception Error)
+        {
+            Builder.AppendLine($"{Error.GetType().Name} - {Error.Message}");
+            
+            if (Error.StackTrace != null)
+            {
+                Builder.AppendLine(Error.StackTrace);
+            }
+            if (Error.InnerException != null)
+            {
+                AppendRecursive(Builder, Error.InnerException);
+            }
         }
 
         #endregion

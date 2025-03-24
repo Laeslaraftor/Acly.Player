@@ -19,10 +19,12 @@ namespace Acly.Player
         public CrossPlayer()
         {
             _Player = new();
-            _Analyzer = new(_Player, true, true)
+
+            if (AudioAnalyzer.TryCreate(_Player, true, true, out _Analyzer))
             {
-                Capacity = 1024
-            };
+                _Analyzer.Capacity = 1024;
+            }
+
             _Player.Prepared += OnPlayerPrepared;
             _Player.Completion += OnSourceCompleted;
 
@@ -118,12 +120,26 @@ namespace Acly.Player
         /// </summary>
         public override int CaptureDataSize
         {
-            get => _Analyzer.Capacity;
-            set => _Analyzer.Capacity = value;
+            get
+            {
+                if (_Analyzer != null)
+                {
+                    return _Analyzer.Capacity;
+                }
+
+                return 0;
+            }
+            set
+            {
+                if (_Analyzer != null)
+                {
+                    _Analyzer.Capacity = value;
+                }
+            }
         }
 
         private readonly MediaPlayer _Player;
-        private readonly AudioAnalyzer _Analyzer;
+        private readonly AudioAnalyzer? _Analyzer;
         private TimeSpan _CurrentDuration;
         private float _Volume = 1;
         private Handler? _Timer = new();
@@ -257,7 +273,7 @@ namespace Acly.Player
         public override void Release()
         {
             _Timer?.Dispose();
-            _Analyzer.Dispose();
+            _Analyzer?.Dispose();
             _Player.Release();
 
             _Timer = null;
@@ -287,6 +303,10 @@ namespace Acly.Player
         /// <exception cref="NotImplementedException"></exception>
         public override float[] GetSpectrumData(int Size, int SmoothAmount, SpectrumWindow Window = SpectrumWindow.Rectangular)
         {
+            if (_Analyzer == null)
+            {
+                return new float[Size];
+            }
             if (Size >= CaptureDataSize)
             {
                 throw new ArgumentException("Запрошено больше данных чем захватывается!");
@@ -308,6 +328,10 @@ namespace Acly.Player
         /// <returns><inheritdoc/></returns>
         public override float[] GetWaveformData(int Size)
         {
+            if (_Analyzer == null)
+            {
+                return new float[Size];
+            }
             if (Size >= CaptureDataSize)
             {
                 throw new ArgumentException("Запрошено больше данных чем захватывается!");
