@@ -7,18 +7,26 @@ using System.Text;
 
 namespace Acly.Player.Server
 {
-    internal static class ImagesServer
+    /// <summary>
+    /// Сервер картинок
+    /// </summary>
+    public static class ImagesServer
     {
+        /// <summary>
+        /// Если true то при возникновении исключений, они будут выводится в отладочную консоль
+        /// </summary>
+        public static bool ExceptionsLog { get; set; }
+
         private const string _ServerAddress = "http://localhost:8159/";
 
-        private static readonly Dictionary<Token, string> _Images = [];
+        private static readonly Dictionary<Token, KeyValuePair<string, byte[]>> _Images = [];
         private static readonly Dictionary<IPlayer, List<Token>> _PlayersTokens = [];
         private static readonly SimpleWebListener _Listener = new(_ServerAddress);
         private static readonly Token _EmptyImageToken = new("empty");
 
         #region Установка
 
-        public static bool Start()
+        internal static bool Start()
         {
             if (_Listener.Start())
             {
@@ -28,7 +36,7 @@ namespace Acly.Player.Server
 
             return false;
         }
-        public static bool Stop()
+        internal static bool Stop()
         {
             if (_Listener.Stop())
             {
@@ -43,11 +51,11 @@ namespace Acly.Player.Server
 
         #region Управление
 
-        public static bool IsAdded(string FilePath)
+        internal static bool IsAdded(string FilePath)
         {
             return IsAdded(FilePath, out _);
         }
-        public static Token AddImage(IPlayer Player, string FilePath)
+        internal static Token AddImage(IPlayer Player, string FilePath)
         {
             if (IsAdded(FilePath, out var FileToken))
             {
@@ -55,12 +63,26 @@ namespace Acly.Player.Server
             }
 
             FileToken = new();
-            _Images.Add(FileToken, FilePath);
+            byte[] ImageData = Resources.DefaultImage;
+
+            if (File.Exists(FilePath))
+            {
+                try
+                {
+                    ImageData = File.ReadAllBytes(FilePath);
+                }
+                catch (Exception Error)
+                {
+                    PrintException(Error);
+                }
+            }
+
+            _Images.Add(FileToken, new(FilePath, ImageData));
             AddPlayerToken(Player, FileToken);
 
             return FileToken;
         }
-        public static bool Remove(Token FileToken)
+        internal static bool Remove(Token FileToken)
         {
             bool Result = _Images.Remove(FileToken);
 
@@ -71,7 +93,7 @@ namespace Acly.Player.Server
 
             return Result;
         }
-        public static Uri GetLink(Token FileToken)
+        internal static Uri GetLink(Token FileToken)
         {
             Uri Result = new($"{_ServerAddress}?t={FileToken}", UriKind.Absolute);
 
@@ -81,7 +103,7 @@ namespace Acly.Player.Server
 
             return Result;
         }
-        public static Uri GetEmptyLink() => GetLink(_EmptyImageToken);
+        internal static Uri GetEmptyLink() => GetLink(_EmptyImageToken);
 
         private static bool IsAdded(string FilePath, out Token FileToken)
         {
@@ -89,7 +111,7 @@ namespace Acly.Player.Server
 
             foreach (var Info in _Images)
             {
-                if (Info.Value == FilePath)
+                if (Info.Value.Key == FilePath)
                 {
                     FileToken = Info.Key;
                     return true;
@@ -113,26 +135,28 @@ namespace Acly.Player.Server
 
         private static void Close(HttpListenerContext Context, byte[] Response)
         {
-            TryCatch(() =>
-            {
-                Context.Response.Close(Response, false);
-            });
-        }
-        private static void TryCatch(Action DoAction)
-        {
             try
             {
-                DoAction.Invoke();
+                Context.Response.Close(Response, false);
             }
             catch (Exception Error)
             {
-                StringBuilder Builder = new();
-                Builder.AppendLine($"Произошла ошибка {Error.GetType().Name}");
-                Builder.AppendLine(Error.Message);
-                Builder.AppendLine(Error.StackTrace);
-
-                Debug.WriteLine(Builder.ToString());
+                PrintException(Error);
             }
+        }
+        private static void PrintException(Exception Error)
+        {
+            if (!ExceptionsLog)
+            {
+                return;
+            }
+
+            StringBuilder Builder = new();
+            Builder.AppendLine($"Произошла ошибка {Error.GetType().Name}");
+            Builder.AppendLine(Error.Message);
+            Builder.AppendLine(Error.StackTrace);
+
+            Debug.WriteLine(Builder.ToString());
         }
 
         #endregion
@@ -151,14 +175,9 @@ namespace Acly.Player.Server
 
             Token FileToken = new(Parts[^1]);
 
-            if (FileToken != _EmptyImageToken && _Images.TryGetValue(FileToken, out var ImagePath))
+            if (FileToken != _EmptyImageToken && _Images.TryGetValue(FileToken, out var ImageData))
             {
-                TryCatch(async () =>
-                {
-                    byte[] Data = await File.ReadAllBytesAsync(ImagePath);
-                    Close(Context, Data);
-                });
-                
+                Close(Context, ImageData.Value);
                 return;
             }
 
