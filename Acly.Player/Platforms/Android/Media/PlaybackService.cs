@@ -38,7 +38,7 @@ namespace Acly.Player.Android.Media
             IPlayer? FirstPlayer = PlayerNotification.FirstAvailablePlayer;
             IMediaItem? MediaItem = FirstPlayer?.Source;
 
-            StartForeground(PlayerNotification.Settings.Id, BuildNotification(BuildMediaNotification(_MediaCompat, MediaItem, FirstPlayer)));
+            StartForeground(PlayerNotification.Settings.Id, BuildNotification(BuildMediaNotification(_MediaCompat, MediaItem, FirstPlayer, false, false)));
         }
         public override void OnDestroy()
         {
@@ -54,7 +54,7 @@ namespace Acly.Player.Android.Media
 
         #region Уведомление
 
-        public static async void CreateNotification(IMediaItem? Item, IPlayer Player)
+        public static void CreateNotification(AndroidMediaItem? Item, IPlayer Player, bool CanSkipToNext, bool CanSkipToPrevious)
         {
             if (_Current == null)
             {
@@ -66,20 +66,18 @@ namespace Acly.Player.Android.Media
             _Current._MediaSession.Active = HaveItem;
             _Current._MediaCompat.Active = HaveItem;
 
-            NotificationCompat.Builder? Notification = BuildMediaNotification(_Current._MediaCompat, Item, Player);
+            NotificationCompat.Builder? Notification = 
+                BuildMediaNotification(_Current._MediaCompat, Item, Player, CanSkipToNext, CanSkipToPrevious);
 
-            if (Item == null || Item?.ImageUrl == null)
+            if (Item == null || Item.ImageUrl == null)
             {
                 BuildNotification(Notification);
                 return;
             }
 
-            Bitmap? Image = _LastItemImage;
-
-            if (_LastItem != Item)
-            {
-                Image = await Item.GetImage();
-            }
+            Item.UpdateImage();
+            Bitmap? Image = Item.Image;
+            
             if (Image != null)
             {
                 Notification?.SetLargeIcon(Image);
@@ -104,16 +102,28 @@ namespace Acly.Player.Android.Media
             }
         }
 
-        private static void ApplyCustomActions(NotificationCompat.Builder Builder, int State)
+        private static void ApplyCustomActions(NotificationCompat.Builder Builder, int State, bool CanSkipToNext, bool CanSkipToPrevious)
         {
             PendingIntent? Stop = CreatePendingIntent(PlaybackStateCompat.ActionStop);
             PendingIntent? PlayPause = CreatePendingIntent(PlaybackStateCompat.ActionPlayPause);
-            PendingIntent? Previous = CreatePendingIntent(PlaybackStateCompat.ActionSkipToPrevious);
-            PendingIntent? Next = CreatePendingIntent(PlaybackStateCompat.ActionSkipToNext);
+            PendingIntent? Previous = null;
+            PendingIntent? Next = null;
+
+            if (CanSkipToNext)
+            {
+                Next = CreatePendingIntent(PlaybackStateCompat.ActionSkipToNext);
+            }
+            if (CanSkipToPrevious)
+            {
+                Previous = CreatePendingIntent(PlaybackStateCompat.ActionSkipToPrevious);
+            }
 
             Builder.AddAction(PlayerNotification.Style.StopIcon, PlayerNotification.Style.StopActionName, Stop);
-            Builder.AddAction(PlayerNotification.Style.BackwardIcon, PlayerNotification.Style.BackwardActionName, Previous);
 
+            if (Previous != null)
+            {
+                Builder.AddAction(PlayerNotification.Style.BackwardIcon, PlayerNotification.Style.BackwardActionName, Previous);
+            }
             if (State == PlaybackStateCompat.StatePlaying)
             {
                 Builder.AddAction(PlayerNotification.Style.PauseIcon, PlayerNotification.Style.PauseActionName, PlayPause);
@@ -122,11 +132,12 @@ namespace Acly.Player.Android.Media
             {
                 Builder.AddAction(PlayerNotification.Style.PlayIcon, PlayerNotification.Style.PlayActionName, PlayPause);
             }
-
-            Builder.AddAction(PlayerNotification.Style.ForwardIcon, PlayerNotification.Style.ForwardActionName, Next);
+            if (Next != null)
+            {
+                Builder.AddAction(PlayerNotification.Style.ForwardIcon, PlayerNotification.Style.ForwardActionName, Next);
+            }
         }
-
-        private static NotificationCompat.Builder? BuildMediaNotification(MediaSessionCompat MediaCompat, IMediaItem? Item, ISimplePlayer? Player)
+        private static NotificationCompat.Builder? BuildMediaNotification(MediaSessionCompat MediaCompat, IMediaItem? Item, ISimplePlayer? Player, bool CanSkipToNext, bool CanSkipToPrevious)
         {
             if (MediaCompat == null || PlayerNotification.Activity == null)
             {
@@ -164,7 +175,7 @@ namespace Acly.Player.Android.Media
             StateBuilder.SetActiveQueueItemId(1);
             StateBuilder.SetBufferedPosition(100);
 
-            ApplyCustomActions(Notification, PlayerState);
+            ApplyCustomActions(Notification, PlayerState, CanSkipToNext, CanSkipToPrevious);
 
             if (Item != null)
             {

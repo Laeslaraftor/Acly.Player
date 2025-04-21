@@ -1,18 +1,52 @@
-﻿namespace Acly.Player
+﻿using System.ComponentModel;
+
+namespace Acly.Player
 {
     /// <summary>
     /// Базовый класс кроссплатформенного плеера
     /// </summary>
-    public abstract class CrossPlayerBase : IPlayer
+    public abstract class CrossPlayerBase : IPlayer, IDisposable, INotifyPropertyChanged
     {
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public event PlayerEvent? SkippedToNext;
+        public event PlayerEvent? SkippedToNext
+        {
+            add
+            {
+                if (!IsDisposed && value != null)
+                {
+                    _SkipToNextHandlers.Add(value);
+                }
+            }
+            remove
+            {
+                if (!IsDisposed && value != null)
+                {
+                    _SkipToNextHandlers.Remove(value);
+                }
+            }
+        }
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public event PlayerEvent? SkippedToPrevious;
+        public event PlayerEvent? SkippedToPrevious
+        {
+            add
+            {
+                if (!IsDisposed && value != null)
+                {
+                    _SkipToPreviousHandlers.Add(value);
+                }
+            }
+            remove
+            {
+                if (!IsDisposed && value != null)
+                {
+                    _SkipToPreviousHandlers.Remove(value);
+                }
+            }
+        }
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
@@ -33,7 +67,26 @@
         /// <inheritdoc/>
         /// </summary>
         public event PlayerTimeEvent? PositionChanged;
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
+        public event PropertyChangedEventHandler? PropertyChanged;
 
+        /// <summary>
+        /// Очищен ли плеер
+        /// </summary>
+        public bool IsDisposed
+        {
+            get => _IsDisposed;
+            private set
+            {
+                if (_IsDisposed != value)
+                {
+                    _IsDisposed = value;
+                    InvokePropertyChangedEvent(nameof(IsDisposed));
+                }
+            }
+        }
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
@@ -41,19 +94,62 @@
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public abstract TimeSpan Duration { get; }
+        public virtual TimeSpan Duration
+        {
+            get => _Duration;
+            protected set
+            {
+                if (_Duration != value)
+                {
+                    _Duration = value;
+                    InvokePropertyChangedEvent(nameof(Duration));
+                }
+            }
+        }
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public abstract float Speed { get; set; }
+        public virtual float Speed
+        {
+            get => _Speed;
+            set
+            {
+                if (_Speed != value)
+                {
+                    _Speed = value;
+                    InvokePropertyChangedEvent(nameof(Speed));
+                }
+            }
+        }
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public abstract float Volume { get; set; }
+        public virtual float Volume
+        {
+            get => _Volume;
+            set
+            {
+                if (_Volume != value)
+                {
+                    InvokePropertyChangedEvent(nameof(Volume));
+                }
+            }
+        }
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public virtual bool Loop { get; set; }
+        public virtual bool Loop
+        {
+            get => _Loop;
+            set
+            {
+                if (_Loop != value)
+                {
+                    _Loop = value;
+                    InvokePropertyChangedEvent(nameof(Loop));
+                }
+            }
+        }
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
@@ -65,22 +161,57 @@
                 if (_State != value)
                 {
                     _State = value;
+                    IsPlaying = value == SimplePlayerState.Playing;
                     StateChanged?.Invoke(this, value);
+                    InvokePropertyChangedEvent(nameof(State));
                 }
             }
         }
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public virtual bool IsPlaying => State == SimplePlayerState.Playing;
+        public virtual bool IsPlaying
+        {
+            get => _IsPlaying;
+            private set
+            {
+                if (_IsPlaying != value)
+                {
+                    _IsPlaying = value;
+                    InvokePropertyChangedEvent(nameof(IsPlaying));
+                }
+            }
+        }
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public virtual bool SourceSetted => Source != null;
+        public virtual bool SourceSetted
+        {
+            get => _SourceSetted;
+            private set
+            {
+                if (_SourceSetted != value)
+                {
+                    _SourceSetted = value;
+                    InvokePropertyChangedEvent(nameof(SourceSetted));
+                }
+            }
+        }
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public virtual bool AutoPlay { get; set; }
+        public virtual bool AutoPlay
+        {
+            get => _AutoPlay;
+            set
+            {
+                if (_AutoPlay != value)
+                {
+                    _AutoPlay = value;
+                    InvokePropertyChangedEvent(nameof(AutoPlay));
+                }
+            }
+        }
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
@@ -92,21 +223,68 @@
                 if (_Source != value)
                 {
                     _Source = value;
+                    SourceSetted = value != null;
                     InvokeSourceChangedEvent();
+                    InvokePropertyChangedEvent(nameof(Source));
                 }
             }
         }
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public virtual TimeSpan PositionUpdateInterval { get; set; } = TimeSpan.FromSeconds(0.05);
+        public virtual TimeSpan PositionUpdateInterval
+        {
+            get => _PositionUpdateInterval;
+            set
+            {
+                if (_PositionUpdateInterval != value)
+                {
+                    _PositionUpdateInterval = value;
+                    InvokePropertyChangedEvent(nameof(PositionUpdateInterval));
+                }
+            }
+        }
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
         public abstract int CaptureDataSize { get; set; }
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
+        public IPlayerRemoteControls RemoteControls => InternalRemoteControls;
 
+        private InternalPlayerRemoteControls InternalRemoteControls
+        {
+            get
+            {
+                if (_InternalRemoteControls == null)
+                {
+                    _InternalRemoteControls = new(this);
+                    _InternalRemoteControls.SkippedToNext += OnSkippedToNext;
+                    _InternalRemoteControls.SkippedToPrevious += OnSkippedToPrevious;
+                    _InternalRemoteControls.CanSkipToNextChanged += OnCanSkipToNextChanged;
+                    _InternalRemoteControls.CanSkipToPreviousChanged += OnCanSkipToPreviousChanged;
+                    _InternalRemoteControls.PropertyChanged += OnRemoteControlsPropertyChanged;
+                }
+                
+                return _InternalRemoteControls;
+            }
+        }
+
+        private bool _IsDisposed;
+        private bool _IsPlaying;
+        private bool _SourceSetted;
+        private bool _AutoPlay;
+        private bool _Loop;
+        private float _Speed = 1;
+        private float _Volume = 1;
+        private TimeSpan _PositionUpdateInterval = TimeSpan.FromSeconds(0.05);
         private SimplePlayerState _State = SimplePlayerState.Stopped;
         private IMediaItem? _Source;
+        private TimeSpan _Duration;
+        private InternalPlayerRemoteControls? _InternalRemoteControls;
+        private List<PlayerEvent> _SkipToNextHandlers = [];
+        private List<PlayerEvent> _SkipToPreviousHandlers = [];
 
         #region Установка
 
@@ -155,7 +333,46 @@
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public abstract void Release();
+        [Obsolete("Надо использовать " + nameof(Dispose))]
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public void Release() => Dispose();
+
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
+        public void Dispose()
+        {
+            if (IsDisposed)
+            {
+                return;
+            }
+
+            IsDisposed = true;
+
+            Dispose(true);
+            Disposed?.Invoke(this);
+
+            GC.SuppressFinalize(this);
+        }
+
+        /// <summary>
+        /// <inheritdoc cref="Dispose()"/>
+        /// </summary>
+        /// <param name="Disposing">Мегаочистка</param>
+        protected virtual void Dispose(bool Disposing)
+        {
+            if (!Disposing)
+            {
+                return;
+            }
+
+            RemoteControls.Dispose();
+            RemoteControls.SkippedToNext -= OnSkippedToNext;
+            RemoteControls.SkippedToPrevious -= OnSkippedToPrevious;
+            RemoteControls.CanSkipToNextChanged -= OnCanSkipToNextChanged;
+            RemoteControls.CanSkipToPreviousChanged -= OnCanSkipToPreviousChanged;
+            RemoteControls.PropertyChanged -= OnRemoteControlsPropertyChanged;
+        }
 
         #endregion
 
@@ -192,25 +409,18 @@
         #region События
 
         /// <summary>
-        /// Вызвать событие очистки плеера
-        /// </summary>
-        protected void InvokeDisposedEvent()
-        {
-            Disposed?.Invoke(this);
-        }
-        /// <summary>
         /// Вызвать событие пропуска до следующего аудиофайла
         /// </summary>
         protected void InvokeSkippedToNextEvent()
         {
-            SkippedToNext?.Invoke(this);
+            InternalRemoteControls.SkipToNext();
         }
         /// <summary>
         /// Вызвать событие пропуска до предыдущего аудиофайла
         /// </summary>
         protected void InvokeSkippedToPreviousEvent()
         {
-            SkippedToPrevious?.Invoke(this);
+            InternalRemoteControls.SkipToPrevious();
         }
         /// <summary>
         /// Вызвать событие окончания проигрывания аудиофайла
@@ -233,6 +443,59 @@
         protected void InvokePositionChangedEvent(TimeSpan Value)
         {
             PositionChanged?.Invoke(this, Value);
+            InvokePropertyChangedEvent(nameof(Position));
+        }
+
+        /// <summary>
+        /// Вызвать событие изменения поля
+        /// </summary>
+        /// <param name="PropertyName">Изменённое поле</param>
+        protected void InvokePropertyChangedEvent(string PropertyName)
+        {
+            PropertyChanged?.Invoke(this, new(PropertyName));
+        }
+
+        /// <summary>
+        /// Событие изменения доступности пропуска до следующего аудиофайла
+        /// </summary>
+        /// <param name="sender">Отправитель</param>
+        /// <param name="e">Доступен ли пропуск до следующего аудиофайла</param>
+        protected virtual void OnCanSkipToNextChanged(object? sender, bool e)
+        {
+        }
+        /// <summary>
+        /// Событие изменения доступности перемотки до предыдущего аудиофайла
+        /// </summary>
+        /// <param name="sender">Отправитель</param>
+        /// <param name="e">Доступна ли перемотка до предыдущего аудиофайла</param>
+        protected virtual void OnCanSkipToPreviousChanged(object? sender, bool e)
+        {
+        }
+        /// <summary>
+        /// Событие изменения поля удалённого управления плеером
+        /// </summary>
+        /// <param name="sender">Отправитель</param>
+        /// <param name="e">Информация</param>
+        protected virtual void OnRemoteControlsPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            InvokePropertyChangedEvent(nameof(RemoteControls));
+        }
+
+        private void OnSkippedToPrevious(object? sender, EventArgs e)
+        {
+            InvokeHandlers(_SkipToPreviousHandlers);
+        }
+        private void OnSkippedToNext(object? sender, EventArgs e)
+        {
+            InvokeHandlers(_SkipToNextHandlers);
+        }
+
+        private void InvokeHandlers(IEnumerable<PlayerEvent> Handlers)
+        {
+            foreach (var Handler in Handlers)
+            {
+                Handler(this);
+            }
         }
 
         #endregion

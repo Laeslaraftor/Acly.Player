@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using Windows.Media;
 using Windows.Media.Playback;
+using System.ComponentModel;
 
 namespace Acly.Player.Windows
 {
@@ -39,9 +40,8 @@ namespace Acly.Player.Windows
             _Controls.IsPlayEnabled = true;
             _Controls.IsPauseEnabled = true;
             _Controls.IsStopEnabled = true;
-            _Controls.IsNextEnabled = true;
-            _Controls.IsPreviousEnabled = true;
-            _Controls.IsEnabled = true;
+            UpdateControls();
+            _Controls.IsEnabled = Player.RemoteControls.IsEnabled;
             Updater.Type = MediaPlaybackType.Music;
 
             SystemPlayer.CurrentStateChanged += OnCurrentStateChanged;
@@ -50,6 +50,9 @@ namespace Acly.Player.Windows
             _Controls.AutoRepeatModeChangeRequested += OnAutoRepeatModeChangeRequested;
             _Controls.PlaybackPositionChangeRequested += OnPlaybackPositionChangeRequested;
             _Controls.PlaybackRateChangeRequested += OnPlaybackRateChangeRequested;
+            _Player.RemoteControls.CanSkipToNextChanged += OnCanSkipToNextChanged;
+            _Player.RemoteControls.CanSkipToPreviousChanged += OnCanSkipToPreviousChanged;
+            _Player.RemoteControls.PropertyChanged += OnRemoteControlsPropertyChanged;
         }
 
         /// <summary>
@@ -93,6 +96,18 @@ namespace Acly.Player.Windows
             _Controls.AutoRepeatModeChangeRequested -= OnAutoRepeatModeChangeRequested;
             _Controls.PlaybackPositionChangeRequested -= OnPlaybackPositionChangeRequested;
             _Controls.PlaybackRateChangeRequested -= OnPlaybackRateChangeRequested;
+
+            _Player.RemoteControls.CanSkipToNextChanged -= OnCanSkipToNextChanged;
+            _Player.RemoteControls.CanSkipToPreviousChanged -= OnCanSkipToPreviousChanged;
+            _Player.RemoteControls.PropertyChanged -= OnRemoteControlsPropertyChanged;
+
+            GC.SuppressFinalize(this);
+        }
+
+        private void UpdateControls()
+        {
+            _Controls.IsNextEnabled = _Player.RemoteControls.PeekCanSkipToNext();
+            _Controls.IsPreviousEnabled = _Player.RemoteControls.PeekCanSkipToPrevious();
         }
 
         #endregion
@@ -157,6 +172,22 @@ namespace Acly.Player.Windows
                     _Player.Stop();
                 }
             });
+        }
+
+        private void OnCanSkipToPreviousChanged(object? sender, bool e)
+        {
+            _Controls.IsPreviousEnabled = e;
+        }
+        private void OnCanSkipToNextChanged(object? sender, bool e)
+        {
+            _Controls.IsNextEnabled = e;
+        }
+        private void OnRemoteControlsPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == "IsEnabled")
+            {
+                _Controls.IsEnabled = _Player.RemoteControls.IsEnabled;
+            }
         }
 
         #endregion

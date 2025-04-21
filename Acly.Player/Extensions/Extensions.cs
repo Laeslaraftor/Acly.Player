@@ -5,10 +5,6 @@ using Android.Support.V4.Media;
 using System.Diagnostics;
 #elif WINDOWS
 using Acly.Player.Server;
-using System.Diagnostics;
-using System.Threading.Tasks;
-using System.Windows.Forms.VisualStyles;
-using Windows.Storage;
 using Windows.Storage.Streams;
 #endif
 
@@ -87,20 +83,37 @@ namespace Acly.Player
 
             return RandomAccessStreamReference.CreateFromUri(FileUri);
         }
+#endif
 
-        private static string GetFileName(this string FilePath)
+        /// <summary>
+        /// Проверить доступен ли пропуск до следующего аудиофайла
+        /// </summary>
+        /// <param name="Controls">Настройки удалённого управления плеером</param>
+        /// <returns>Доступен ли пропуск до следующего аудиофайла</returns>
+        public static bool PeekCanSkipToNext(this IPlayerRemoteControls Controls)
         {
-            FilePath = FilePath.Replace(@"\", "/");
-            var Parts = FilePath.Split('/');
-
-            if (Parts.Length > 0)
+            if (Controls.SkipToNextCommand == null)
             {
-                return Parts[^1];
+                return Controls.CanSkipToNext;
             }
 
-            return string.Empty;
+            return Controls.CanSkipToNext 
+                && Controls.SkipToNextCommand.CanExecute(Controls.SkipToNextCommandParameter);
         }
+        /// <summary>
+        /// Проверить доступен ли пропуск до следующего аудиофайла
+        /// </summary>
+        /// <param name="Controls">Настройки удалённого управления плеером</param>
+        /// <returns>Доступен ли пропуск до следующего аудиофайла</returns>
+        public static bool PeekCanSkipToPrevious(this IPlayerRemoteControls Controls)
+        {
+            if (Controls.SkipToPreviousCommand == null)
+            {
+                return Controls.CanSkipToPrevious;
+            }
 
-#endif
+            return Controls.CanSkipToPrevious
+                && Controls.SkipToPreviousCommand.CanExecute(Controls.SkipToPreviousCommandParameter);
+        }
     }
 }

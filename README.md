@@ -4,11 +4,12 @@
 ![Windows](https://raw.githubusercontent.com/Laeslaraftor/Acly.Player/master/Acly.Player/Preview/Win.jpg)
 ![Android](https://raw.githubusercontent.com/Laeslaraftor/Acly.Player/master/Acly.Player/Preview/Android.jpg)
 
-Чтобы получить экзепляр плеера необходимо написать следующее:
+Чтобы получить экземпляр плеера необходимо написать следующее:
 
 ```c#
 CrossPlayer player = new CrossPlayer();
-IPlayer player = new CrossPlayer(); //альтернативный вариант
+// или
+IPlayer player = new CrossPlayer();
 ```
 
 # Настройка для Android
@@ -85,7 +86,12 @@ bool SourceSetted { get; } // Установлено ли аудио
 bool AutoPlay { get; set; } // Автоматически проигрывать после смены аудио
 SimplePlayerState State { get; } // Состояние плеера
 IMediaItem Source { get; } // Информация о текущем аудио
+int CaptureDataSize { get; set; } // Размер захыватываемых данных для визуализации (FFT, Waveform)
+IPlayerRemoteControls RemoteControls { get; } // Настройки удалённого управления
 ```
+
+> Для настройки поведения удалённого управления плеера используйте `RemoteControls`. 
+Подробнее об этом можно прочитать [здесь](https://github.com/Laeslaraftor/Acly.Player/blob/master/RemoteConrols.md)
 
 Управление плеером:
 
@@ -93,8 +99,6 @@ IMediaItem Source { get; } // Информация о текущем аудио
 void Pause(); // Пауза
 void Play(); // Воспроизвести
 void Stop(); // Остановить
-
-void Release(); // Очистить
 ```
 
 # Установка аудио

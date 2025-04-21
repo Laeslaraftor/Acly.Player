@@ -2,6 +2,7 @@
 using Acly.Player.Windows;
 using Windows.Media.Playback;
 using Acly.Platforms;
+using System.Runtime.InteropServices;
 
 namespace Acly.Player
 {
@@ -9,7 +10,7 @@ namespace Acly.Player
     /// Плеер для Windows
     /// </summary>
     [SimplePlayerImplementation(RuntimePlatform.Windows)]
-    public class CrossPlayer : CrossPlayerBase
+    public partial class CrossPlayer : CrossPlayerBase
     {
         /// <summary>
         /// Создать новый экземпляр плеера для Windows
@@ -25,9 +26,6 @@ namespace Acly.Player
             _Player.CurrentStateChanged += OnPlayerCurrentStateChanged;
 
             _Dispatcher = Dispatcher.GetForCurrentThread();
-            _Controls = new(this, _Player, _Dispatcher);
-            _Controls.SkipToNextRequest += InvokeSkippedToNextEvent;
-            _Controls.SkipToPreviousRequest += InvokeSkippedToPreviousEvent;
 
             _PositionTimer = new()
             {
@@ -46,7 +44,7 @@ namespace Acly.Player
         {
             try
             {
-                Release();
+                Dispose();
             }
             catch
             {
@@ -58,47 +56,85 @@ namespace Acly.Player
         /// </summary>
         public override TimeSpan Position
         {
-            get => _Player.Position;
-            set => _Player.Position = value;
+            get
+            {
+                if (IsDisposed)
+                {
+                    return TimeSpan.Zero;
+                }
+
+                return _Player.Position;
+            }
+            set
+            {
+                if (!IsDisposed)
+                {
+                    _Player.Position = value;
+                }
+            }
         }
-        /// <summary>
-        /// <inheritdoc/>
-        /// </summary>
-        public override TimeSpan Duration => _Player.NaturalDuration;
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
         public override float Speed
         {
-            get => (float)_Player.PlaybackRate;
-            set => _Player.PlaybackRate = (double)value;
+            get => base.Speed;
+            set
+            {
+                if (!IsDisposed)
+                {
+                    _Player.PlaybackRate = (double)value;
+                }
+
+                base.Speed = value;
+            }
         }
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
         public override float Volume
         {
-            get => (float)_Player.Volume;
-            set => _Player.Volume = (double)value;
+            get => base.Volume;
+            set
+            {
+                if (!IsDisposed)
+                {
+                    _Player.Volume = (double)value;
+                }
+
+                base.Volume = value;
+            }
         }
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
         public override bool Loop
         {
-            get => _Player.IsLoopingEnabled;
-            set => _Player.IsLoopingEnabled = value;
+            get => base.Loop;
+            set
+            {
+                if (!IsDisposed)
+                {
+                    _Player.IsLoopingEnabled = value;
+                }
+
+                base.Loop = value;
+            }
         }
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public override TimeSpan PositionUpdateInterval 
+        public override TimeSpan PositionUpdateInterval
         { 
             get => base.PositionUpdateInterval; 
             set
             {
+                if (!IsDisposed)
+                {
+                    _PositionTimer.Interval = value.TotalMilliseconds;
+                }
+
                 base.PositionUpdateInterval = value;
-                _PositionTimer.Interval = value.TotalMilliseconds;
             } 
         }
         /// <summary>
@@ -106,12 +142,27 @@ namespace Acly.Player
         /// </summary>
         public override int CaptureDataSize
         {
-            get => _Analyzer.Capacity;
-            set => _Analyzer.Capacity = value;
+            get
+            {
+                if (IsDisposed)
+                {
+                    return 0;
+                }
+
+                return _Analyzer.Capacity;
+            }
+            set
+            {
+                if (!IsDisposed && _Analyzer.Capacity != value)
+                {
+                    _Analyzer.Capacity = value;
+                    InvokePropertyChangedEvent(nameof(CaptureDataSize));
+                }
+            }
         }
 
         private readonly MediaPlayer _Player;
-        private readonly PlayerTransportControls _Controls;
+        private PlayerTransportControls? _Controls;
         private readonly AudioAnalyzer _Analyzer;
         private readonly System.Timers.Timer _PositionTimer;
         private readonly IDispatcher? _Dispatcher;
@@ -136,7 +187,7 @@ namespace Acly.Player
             Source = new MediaItem();
 
             _Player.SetStreamSource(SourceStream.AsRandomAccessStream());
-            _Controls.SetMediaItem(Source);
+            SetControlsMediaItem(Source);
 
             return Task.CompletedTask;
         }
@@ -149,7 +200,7 @@ namespace Acly.Player
             Source = new MediaItem();
 
             _Player.SetUriSource(new(SourceUrl, UriKind.Absolute));
-            _Controls.SetMediaItem(Source);
+            SetControlsMediaItem(Source);
 
             if (AutoPlay)
             {
@@ -167,7 +218,24 @@ namespace Acly.Player
             Source = Item;
 
             await SetSource(Item.AudioUrl);
-            _Controls.SetMediaItem(Item);
+            SetControlsMediaItem(Item);
+        }
+
+        private void InitControls()
+        {
+            if (_Controls != null)
+            {
+                return;
+            }
+
+            _Controls = new(this, _Player, _Dispatcher);
+            _Controls.SkipToNextRequest += InvokeSkippedToNextEvent;
+            _Controls.SkipToPreviousRequest += InvokeSkippedToPreviousEvent;
+        }
+        private void SetControlsMediaItem(IMediaItem Item)
+        {
+            InitControls();
+            _Controls?.SetMediaItem(Item);
         }
 
         #endregion
@@ -199,13 +267,19 @@ namespace Acly.Player
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public override void Release()
+        protected override void Dispose(bool Disposing)
         {
+            base.Dispose(Disposing);
+
             _Player.MediaEnded -= OnPlayerMediaEnded;
             _Player.CurrentStateChanged -= OnPlayerCurrentStateChanged;
             _PositionTimer.Elapsed -= OnPositionTimerElapsed;
-            _Controls.SkipToNextRequest -= InvokeSkippedToNextEvent;
-            _Controls.SkipToPreviousRequest -= InvokeSkippedToPreviousEvent;
+            
+            if (_Controls != null)
+            {
+                _Controls.SkipToNextRequest -= InvokeSkippedToNextEvent;
+                _Controls.SkipToPreviousRequest -= InvokeSkippedToPreviousEvent;
+            }
 
             _PositionTimer.Enabled = false;
             _PositionTimer.Stop();
@@ -213,9 +287,7 @@ namespace Acly.Player
             _Analyzer.Dispose();
 
             _Player.Dispose();
-            _Controls.Dispose();
-
-            InvokeDisposedEvent();
+            _Controls?.Dispose();
         }
 
         #endregion
@@ -263,10 +335,24 @@ namespace Acly.Player
                 return;
             }
 
-            await _Dispatcher.DispatchAsync(() =>
+            await _Dispatcher.DispatchAsync(OnTimerTick);
+        }
+        private void OnTimerTick()
+        {
+            if (IsDisposed)
+            {
+                return;
+            }
+
+            Duration = _Player.NaturalDuration;
+
+            try
             {
                 InvokePositionChangedEvent(Position);
-            });
+            }
+            catch (COMException)
+            {
+            }
         }
 
         private void OnPlayerMediaEnded(MediaPlayer sender, object args)

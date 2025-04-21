@@ -1,9 +1,11 @@
-﻿namespace Acly.Player
+﻿using System.ComponentModel;
+
+namespace Acly.Player
 {
     /// <summary>
     /// Интерфейс медиа предмета
     /// </summary>
-    public interface IMediaItem
+    public interface IMediaItem : INotifyPropertyChanged
     {
         /// <summary>
         /// Название

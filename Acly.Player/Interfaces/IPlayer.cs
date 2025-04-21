@@ -34,6 +34,10 @@
         /// Размер захватываемых данных для визуализации. Значение должно быть результатом 2 в N степени.
         /// </summary>
         public int CaptureDataSize { get; set; }
+        /// <summary>
+        /// Настройки удалённого управления плеером
+        /// </summary>
+        public IPlayerRemoteControls RemoteControls { get; }
 
         #region Дополнительно
 

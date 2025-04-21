@@ -4,6 +4,7 @@ using Acly.Tokens;
 using Android.Media;
 using Android.OS;
 using Acly.Platforms;
+using System.ComponentModel;
 
 namespace Acly.Player
 {
@@ -27,12 +28,14 @@ namespace Acly.Player
 
             _Player.Prepared += OnPlayerPrepared;
             _Player.Completion += OnSourceCompleted;
+            _CanSkipToNext = RemoteControls.PeekCanSkipToNext();
+            _CanSkipToPrevious = RemoteControls.PeekCanSkipToPrevious();
 
             PlayerNotification.PlayRequest += Play;
             PlayerNotification.PauseRequest += Pause;
             PlayerNotification.StopRequest += Stop;
-            PlayerNotification.SkipToNextRequest += InvokeSkippedToNextEvent;
-            PlayerNotification.SkipToPreviousRequest += InvokeSkippedToPreviousEvent;
+            PlayerNotification.SkipToNextRequest += OnPlayerNotificationSkipToNextRequest;
+            PlayerNotification.SkipToPreviousRequest += OnPlayerNotificationSkipToPreviousRequest;
             PlayerNotification.SeekRequest += OnSeekRequest;
             PlayerNotification.AddPlayer(this);
 
@@ -42,7 +45,7 @@ namespace Acly.Player
         {
             try
             {
-                Release();
+                Dispose();
             }
             catch
             {
@@ -54,45 +57,53 @@ namespace Acly.Player
         /// </summary>
         public override TimeSpan Position
         {
-            get => TimeSpan.FromMilliseconds(_Player.CurrentPosition);
-            set => _Player.SeekTo(Convert.ToInt32(value.TotalMilliseconds));
+            get
+            {
+                if (IsDisposed)
+                {
+                    return TimeSpan.Zero;
+                }
+
+                return TimeSpan.FromMilliseconds(_Player.CurrentPosition);
+            }
+            set
+            {
+                if (!IsDisposed)
+                {
+                    _Player.SeekTo(Convert.ToInt32(value.TotalMilliseconds));
+                }
+            }
         }
-        /// <summary>
-        /// <inheritdoc/>
-        /// </summary>
-        public override TimeSpan Duration => _CurrentDuration;
-        /// <summary>
-        /// <inheritdoc/>
-        /// </summary>
-        public override bool SourceSetted => _SourceSetted;
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
         public override float Speed
         {
-            get
+            get => base.Speed;
+            set
             {
-                try
+                if (!IsDisposed)
                 {
-                    return _Player.PlaybackParams.Pitch;
+                    _Player.PlaybackParams.SetPitch(value);
                 }
-                catch
-                {
-                    return 0;
-                }
+
+                base.Speed = value;
             }
-            set => _Player.PlaybackParams.SetPitch(value);
         }
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
         public override float Volume
         {
-            get => _Volume;
+            get => base.Volume;
             set
             {
-                _Player.SetVolume(value, value);
-                _Volume = value;
+                if (!IsDisposed)
+                {
+                    _Player.SetVolume(value, value);
+                }
+
+                base.Volume = value;
             }
         }
         /// <summary>
@@ -100,8 +111,16 @@ namespace Acly.Player
         /// </summary>
         public override bool Loop
         {
-            get => _Player.Looping;
-            set => _Player.Looping = value;
+            get => base.Loop;
+            set
+            {
+                if (!IsDisposed)
+                {
+                    _Player.Looping = value;
+                }
+
+                base.Loop = value;
+            }
         }
         /// <summary>
         /// <inheritdoc/>
@@ -112,7 +131,11 @@ namespace Acly.Player
             protected set
             {
                 base.State = value;
-                UpdateNotification();
+
+                if (!IsDisposed)
+                {
+                    UpdateNotification();
+                }
             }
         }
         /// <summary>
@@ -122,7 +145,7 @@ namespace Acly.Player
         {
             get
             {
-                if (_Analyzer != null)
+                if (!IsDisposed && _Analyzer != null)
                 {
                     return _Analyzer.Capacity;
                 }
@@ -131,21 +154,87 @@ namespace Acly.Player
             }
             set
             {
-                if (_Analyzer != null)
+                if (!IsDisposed && _Analyzer != null && _Analyzer.Capacity != value)
                 {
                     _Analyzer.Capacity = value;
+                    InvokePropertyChangedEvent(nameof(CaptureDataSize));
+                }
+            }
+        }
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
+        public override IMediaItem? Source 
+        { 
+            get
+            {
+                var Result = base.Source;
+
+                if (Result is AndroidMediaItem AndroidItem)
+                {
+                    return AndroidItem.Original;
+                }
+
+                return Result;
+            }
+            protected set => base.Source = value; 
+        }
+
+        internal AndroidMediaItem? CurrentItem
+        {
+            get => base.Source as AndroidMediaItem;
+            set
+            {
+                if (value == CurrentItem)
+                {
+                    return;
+                }
+                if (CurrentItem != null)
+                {
+                    CurrentItem.PropertyChanged -= OnCurrentItemPropertyChanged;
+                    CurrentItem.Dispose();
+                }
+                if (value != null)
+                {
+                    value.PropertyChanged += OnCurrentItemPropertyChanged;
+                }
+
+                Source = value;
+            }
+        }
+
+        private bool CanSkipToNext
+        {
+            get => _CanSkipToNext;
+            set
+            {
+                if (_CanSkipToNext != value)
+                {
+                    _CanSkipToNext = value;
+                    UpdateNotification();
+                }
+            }
+        }
+        private bool CanSkipToPrevious
+        {
+            get => _CanSkipToPrevious;
+            set
+            {
+                if (_CanSkipToPrevious != value)
+                {
+                    _CanSkipToPrevious = value;
+                    UpdateNotification();
                 }
             }
         }
 
         private readonly MediaPlayer _Player;
         private readonly AudioAnalyzer? _Analyzer;
-        private TimeSpan _CurrentDuration;
-        private float _Volume = 1;
         private Handler? _Timer = new();
         private bool _DisableCompletedEvent;
         private Token? _SourceSettingToken;
-        private bool _SourceSetted;
+        private bool _CanSkipToNext;
+        private bool _CanSkipToPrevious;
 
         #region Установка
 
@@ -165,7 +254,7 @@ namespace Acly.Player
                 return await TrySetSourceAndPrepare(Data);
             });
 
-            InvokeSourceChangedEvent();
+            CurrentItem = new(new MediaItem());
 
             return Task.CompletedTask;
         }
@@ -199,7 +288,7 @@ namespace Acly.Player
         /// <param name="Item"><inheritdoc/></param>
         public override Task SetSource(IMediaItem Item)
         {
-            Source = Item;
+            CurrentItem = new(Item);
             UpdateNotification();
 
             if (SourceSetted)
@@ -211,8 +300,6 @@ namespace Acly.Player
             {
                 return await TrySetSourceAndPrepare(Item.AudioUrl);
             });
-
-            InvokeSourceChangedEvent();
 
             return Task.CompletedTask;
         }
@@ -270,12 +357,15 @@ namespace Acly.Player
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public override void Release()
+        protected override void Dispose(bool Disposing)
         {
+            base.Dispose(Disposing);
+
             _Timer?.Dispose();
             _Analyzer?.Dispose();
             _Player.Release();
 
+            CurrentItem = null;
             _Timer = null;
             _Player.Prepared -= OnPlayerPrepared;
             _Player.Completion -= OnSourceCompleted;
@@ -285,8 +375,6 @@ namespace Acly.Player
             PlayerNotification.SkipToNextRequest -= InvokeSkippedToNextEvent;
             PlayerNotification.SkipToPreviousRequest -= InvokeSkippedToPreviousEvent;
             PlayerNotification.SeekRequest -= OnSeekRequest;
-
-            InvokeDisposedEvent();
         }
 
         #endregion
@@ -386,23 +474,47 @@ namespace Acly.Player
 
         private void UpdateNotification()
         {
-            PlayerNotification.Update(this, Source);
+            if (!RemoteControls.IsEnabled)
+            {
+                if (PlayerNotification.LastPlayerNotification == this)
+                {
+                    PlayerNotification.Stop();
+                }
+
+                return;
+            }
+
+            PlayerNotification.Update(this, CurrentItem, CanSkipToNext, CanSkipToPrevious);
         }
 
         #endregion
 
         #region События
 
-        private new void InvokeSourceChangedEvent()
+        protected override void OnCanSkipToNextChanged(object? sender, bool e)
         {
-            _SourceSetted = true;
-            base.InvokeSourceChangedEvent();
+            base.OnCanSkipToNextChanged(sender, e);
+            CanSkipToNext = e;
+        }
+        protected override void OnCanSkipToPreviousChanged(object? sender, bool e)
+        {
+            base.OnCanSkipToPreviousChanged(sender, e);
+            CanSkipToPrevious = e;
+        }
+        protected override void OnRemoteControlsPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            base.OnRemoteControlsPropertyChanged(sender, e);
+
+            if (e.PropertyName == "IsEnabled")
+            {
+                UpdateNotification();
+            }
         }
 
         private void OnPlayerPrepared(object? sender, EventArgs e)
         {
             State = SimplePlayerState.Paused;
-            _CurrentDuration = TimeSpan.FromMilliseconds(_Player.Duration);
+            Duration = TimeSpan.FromMilliseconds(_Player.Duration);
 
             if (Source != null && Source.Duration == TimeSpan.Zero)
             {
@@ -428,6 +540,32 @@ namespace Acly.Player
         private void OnSeekRequest(TimeSpan Position)
         {
             this.Position = Position;
+        }
+
+        private void OnCurrentItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == "Image")
+            {
+                UpdateNotification();
+            }
+            else if (e.PropertyName == "ImageUrl" && PlayerNotification.LastPlayerNotification == this)
+            {
+                CurrentItem?.UpdateImage();
+            }
+        }
+        private void OnPlayerNotificationSkipToPreviousRequest()
+        {
+            if (PlayerNotification.LastPlayerNotification == this)
+            {
+                InvokeSkippedToPreviousEvent();
+            }
+        }
+        private void OnPlayerNotificationSkipToNextRequest()
+        {
+            if (PlayerNotification.LastPlayerNotification == this)
+            {
+                InvokeSkippedToNextEvent();
+            }
         }
 
         private void OnTimerTick()

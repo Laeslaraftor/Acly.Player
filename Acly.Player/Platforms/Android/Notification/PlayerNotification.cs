@@ -3,7 +3,6 @@ using Android;
 using Android.Content;
 using AndroidX.Core.Content;
 using Android.Content.PM;
-using AndroidX.Startup;
 
 namespace Acly.Player.Android
 {
@@ -29,6 +28,8 @@ namespace Acly.Player.Android
                 return _Players[0];
             }
         }
+        public static IPlayer? LastPlayerNotification { get; private set; }
+        public static int PlayersCount => _Players.Count;
 
         public static PlayerNotificationStyle Style { get; private set; } = new();
         public static PlayerNotificationSettings Settings { get; private set; } = new();
@@ -72,7 +73,7 @@ namespace Acly.Player.Android
 
         #region Уведомление
 
-        public static void Update(IPlayer Player, IMediaItem? Item)
+        public static void Update(IPlayer Player, AndroidMediaItem? Item, bool CanSkipToNext, bool CanSkipToPrevious)
         {
             if (!ServicesStarted)
             {
@@ -84,7 +85,8 @@ namespace Acly.Player.Android
                 return;
             }
 
-            PlaybackService.CreateNotification(Item, Player);
+            PlaybackService.CreateNotification(Item, Player, CanSkipToNext, CanSkipToPrevious);
+            LastPlayerNotification = Player;
         }
 
         #endregion
@@ -118,6 +120,7 @@ namespace Acly.Player.Android
 
             ServicesStarted = false;
             _BrowserService = null;
+            LastPlayerNotification = null;
         }
 
         #endregion

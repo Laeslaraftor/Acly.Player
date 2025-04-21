@@ -44,6 +44,8 @@ public partial class MiniPlayer : ContentView
         _Player.StateChanged += OnStateChanged;
         _Player.SkippedToNext += OnSkippedToNext;
         _Player.SkippedToPrevious += OnSkippedToPrevious;
+        RemoteControlsEnabledCheckbox.IsChecked = _Player.RemoteControls.IsEnabled;
+
         await _Player.SetSource(Item);
     }
     private void RemovePlayer()
@@ -183,5 +185,27 @@ public partial class MiniPlayer : ContentView
         _Player.Position = Position;
     }
 
-#endregion
+    private void OnCheckBoxCheckedPreviousChanged(object sender, CheckedChangedEventArgs e)
+    {
+        if (_Player != null)
+        {
+            _Player.RemoteControls.CanSkipToPrevious = e.Value;
+        }
+    }
+    private void OnCheckBoxCheckedNextChanged(object sender, CheckedChangedEventArgs e)
+    {
+        if (_Player != null)
+        {
+            _Player.RemoteControls.CanSkipToNext = e.Value;
+        }
+    }
+    private void OnCheckBoxIsEnabledCheckedChanged(object sender, CheckedChangedEventArgs e)
+    {
+        if (_Player != null)
+        {
+            _Player.RemoteControls.IsEnabled = e.Value;
+        }
+    }
+
+    #endregion
 }
