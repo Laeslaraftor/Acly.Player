@@ -91,7 +91,7 @@ IPlayerRemoteControls RemoteControls { get; } // Настройки удалён
 ```
 
 > Для настройки поведения удалённого управления плеера используйте `RemoteControls`. 
-Подробнее об этом можно прочитать [здесь](https://github.com/Laeslaraftor/Acly.Player/blob/master/RemoteConrols.md)
+Подробнее об этом можно прочитать [здесь](https://github.com/Laeslaraftor/Acly.Player/blob/master/Acly.Player/RemoteControls.md)
 
 Управление плеером:
 

@@ -39,14 +39,14 @@ bool CanSkipToPrevious { get; set; } // Доступна ли перемотка
 
 Вот так выглядит управление с отключенной возможностью пропуска:
 
-![Windows](https://raw.githubusercontent.com/Laeslaraftor/Acly.Player/master/Acly.Player/Preview/AndroidEmptyControls.jpg)
-![Android](https://raw.githubusercontent.com/Laeslaraftor/Acly.Player/master/Acly.Player/Preview/WindowsEmptyControls.jpg)
+![Windows](https://raw.githubusercontent.com/Laeslaraftor/Acly.Player/master/Acly.Player/Preview/AndroidEmptyControls.png)
+![Android](https://raw.githubusercontent.com/Laeslaraftor/Acly.Player/master/Acly.Player/Preview/WindowsEmptyControls.png)
 
 
 А вот так выглядит управление с возможностью перематывать только до следующего аудиофайла:
 
-![Windows](https://raw.githubusercontent.com/Laeslaraftor/Acly.Player/master/Acly.Player/Preview/AndroidForwardControls.jpg)
-![Android](https://raw.githubusercontent.com/Laeslaraftor/Acly.Player/master/Acly.Player/Preview/WindowsForwardControls.jpg)
+![Windows](https://raw.githubusercontent.com/Laeslaraftor/Acly.Player/master/Acly.Player/Preview/AndroidForwardControls.png)
+![Android](https://raw.githubusercontent.com/Laeslaraftor/Acly.Player/master/Acly.Player/Preview/WindowsForwardControls.png)
 
 
 > Для Android можно изменить иконки уведомления. Об говорилось [здесь](https://github.com/Laeslaraftor/Acly.Player/blob/master/README.md)
